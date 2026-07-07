@@ -1,0 +1,116 @@
+{
+  "entities": {
+    "StaffProfile": {
+      "title": "StaffProfile",
+      "description": "Staff profiles of the school",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "workingHours": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "maxWeeklyDuties": { "type": "integer" }
+      },
+      "required": ["id", "name", "role", "email", "phone"]
+    },
+    "DutyZone": {
+      "title": "DutyZone",
+      "description": "Duty zones in the school",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "zoneType": { "type": "string" },
+        "name": { "type": "string" },
+        "floor": { "type": "string" },
+        "riskLevel": { "type": "string" },
+        "minStaffRequired": { "type": "integer" },
+        "description": { "type": "string" }
+      },
+      "required": ["id", "zoneType", "name", "floor", "riskLevel", "minStaffRequired"]
+    },
+    "RosterEntry": {
+      "title": "RosterEntry",
+      "description": "Roster assignment details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "day": { "type": "string" },
+        "shiftId": { "type": "string" },
+        "zoneId": { "type": "string" },
+        "staffIds": { "type": "array" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "day", "shiftId", "zoneId", "staffIds", "status"]
+    },
+    "IncidentReport": {
+      "title": "IncidentReport",
+      "description": "Incident report logged by staff",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "zoneId": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "severity": { "type": "string" },
+        "description": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "zoneId", "reporterId", "reporterName", "severity", "description", "timestamp", "status"]
+    },
+    "EscalationAlert": {
+      "title": "EscalationAlert",
+      "description": "Real-time escalation alerts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "entryId": { "type": "string" },
+        "msg": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "solved": { "type": "boolean" },
+        "backupName": { "type": "string" }
+      },
+      "required": ["id", "entryId", "msg", "timestamp", "solved"]
+    },
+    "AppSetting": {
+      "title": "AppSetting",
+      "description": "Global application setting values",
+      "type": "object",
+      "properties": {
+        "key": { "type": "string" },
+        "value": { "type": "string" }
+      },
+      "required": ["key", "value"]
+    }
+  },
+  "firestore": {
+    "/staff/{staffId}": {
+      "schema": "StaffProfile",
+      "description": "Staff members lookup collection"
+    },
+    "/zones/{zoneId}": {
+      "schema": "DutyZone",
+      "description": "Duty zones lookup collection"
+    },
+    "/roster/{rosterId}": {
+      "schema": "RosterEntry",
+      "description": "Weekly duty roster entries"
+    },
+    "/incidents/{incidentId}": {
+      "schema": "IncidentReport",
+      "description": "Logged safety incident reports"
+    },
+    "/escalations/{escalationId}": {
+      "schema": "EscalationAlert",
+      "description": "Escalated safety breach alerts"
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSetting",
+      "description": "Global application configurations"
+    }
+  }
+}

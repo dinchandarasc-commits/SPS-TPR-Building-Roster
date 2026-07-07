@@ -1,0 +1,6 @@
+{
+  "name": "Staff Duty Roster",
+  "description": "A safety-first web application for managing staff duty rosters across multi-story school buildings, with AI-powered campus safety audits and roster optimization.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
