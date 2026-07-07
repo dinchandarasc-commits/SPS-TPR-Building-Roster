@@ -550,6 +550,7 @@ export default function App() {
       let req = z.minStaffRequired;
       if (z.zoneType === 'Zone A') req = minStaffZoneA;
       if (z.zoneType === 'Zone B') req = minStaffZoneB;
+      if (z.zoneType === 'Zone C') req = minStaffZoneB; // Map Zone C to Zone B's floor/room limits
       if (z.zoneType === 'Zone D') req = minStaffZoneD;
       return { ...z, minStaffRequired: req };
     }));
@@ -1094,16 +1095,50 @@ export default function App() {
 
         {/* ដំណាក់កាលទី ១៖ ការកំណត់លក្ខខណ្ឌ (Admin Configuration & Rule Engine) */}
         <div className="bg-white border border-indigo-100 rounded-lg p-5 shadow-xs bg-linear-to-b from-white to-indigo-50/10">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 border-b border-slate-100 pb-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
               <Sliders className="w-5 h-5 text-indigo-600" />
               <h3 className="font-bold text-sm text-slate-800 font-display uppercase tracking-wide">
                 ដំណាក់កាលទី ១៖ ការកំណត់លក្ខខណ្ឌ (Admin Configuration)
               </h3>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>សកម្ម៖ RULE ENGINE</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={async () => {
+                  if (window.confirm("តើអ្នកពិតជាចង់កំណត់តំបន់ និងកាលវិភាគឡើងវិញទៅកាន់ទម្រង់ស្តង់ដារ ៦ ជាន់មែនទេ?")) {
+                    try {
+                      setIsAIWorking(true);
+                      // Reset localStorage
+                      localStorage.setItem('school_safety_zones', JSON.stringify(INITIAL_ZONES));
+                      localStorage.setItem('school_safety_roster', JSON.stringify(INITIAL_ROSTER));
+                      
+                      // Reset Firestore
+                      await saveFullZones(INITIAL_ZONES);
+                      await saveFullRoster(INITIAL_ROSTER);
+                      
+                      // Reset React state
+                      setZones(INITIAL_ZONES);
+                      setRoster(INITIAL_ROSTER);
+                      
+                      alert("បានកំណត់ឡើងវិញដោយជោគជ័យនូវតំបន់ និងកាលវិភាគទាំង ៦ ជាន់!");
+                    } catch (err) {
+                      console.error("Failed to reset database:", err);
+                      alert("មានបញ្ហាក្នុងការកំណត់ឡើងវិញ៖ " + err);
+                    } finally {
+                      setIsAIWorking(false);
+                    }
+                  }
+                }}
+                disabled={isAIWorking}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-bold border border-rose-200 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${isAIWorking ? 'animate-spin' : ''}`} />
+                <span>កំណត់ឡើងវិញ ៦ ជាន់ (Reset to 6-Floor Layout)</span>
+              </button>
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>សកម្ម៖ RULE ENGINE</span>
+              </div>
             </div>
           </div>
 

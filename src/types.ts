@@ -10,13 +10,13 @@ export interface StaffProfile {
   maxWeeklyDuties: number;
 }
 
-export type ZoneType = 'Zone A' | 'Zone B' | 'Zone D';
+export type ZoneType = 'Zone A' | 'Zone B' | 'Zone C' | 'Zone D';
 
 export interface DutyZone {
   id: string;
   zoneType: ZoneType;
   name: string;
-  floor: 'Ground' | '1st Floor' | '2nd Floor' | '3rd Floor' | '4th Floor' | '5th Floor' | 'N/A';
+  floor: 'Ground' | '1st Floor' | '2nd Floor' | '3rd Floor' | '4th Floor' | '5th Floor' | '6th Floor' | '3rd-6th Floors' | 'N/A';
   riskLevel: 'High' | 'Medium' | 'Low';
   minStaffRequired: number;
   description: string;

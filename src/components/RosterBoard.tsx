@@ -216,9 +216,10 @@ export default function RosterBoard({
                           <span className={`px-1.5 py-0.5 rounded-sm text-[9px] font-bold tracking-wider ${
                             zone.zoneType === 'Zone D' ? 'bg-rose-50 text-rose-700 border border-rose-100' :
                             zone.zoneType === 'Zone B' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                            zone.zoneType === 'Zone C' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
                             'bg-emerald-50 text-emerald-700 border border-emerald-100'
                           }`}>
-                            {zone.zoneType === 'Zone A' ? 'តំបន់ A' : zone.zoneType === 'Zone B' ? 'តំបន់ B' : 'តំបន់ D'}
+                            {zone.zoneType === 'Zone A' ? 'តំបន់ A' : zone.zoneType === 'Zone B' ? 'តំបន់ B' : zone.zoneType === 'Zone C' ? 'តំបន់ C' : 'តំបន់ D'}
                           </span>
                           <span className="text-[10px] font-medium text-slate-500">
                             {getFloorTranslation(zone.floor)} • តម្រូវការ៖ {zone.minStaffRequired} នាក់
@@ -362,7 +363,7 @@ export default function RosterBoard({
                 <UserPlus className="w-5 h-5 text-indigo-600" /> កែសម្រួលការចាត់តាំងបុគ្គលិក
               </h2>
               <div className="mt-2 bg-slate-50 border border-slate-200 rounded-md p-3 text-xs text-slate-600 font-medium">
-                <span className="font-bold text-slate-800 font-display">តំបន់គោលដៅ៖</span> {activeZone.name} ({activeZone.zoneType === 'Zone A' ? 'តំបន់ A' : activeZone.zoneType === 'Zone B' ? 'តំបន់ B' : 'តំបន់ D'}) <br />
+                <span className="font-bold text-slate-800 font-display">តំបន់គោលដៅ៖</span> {activeZone.name} ({activeZone.zoneType === 'Zone A' ? 'តំបន់ A' : activeZone.zoneType === 'Zone B' ? 'តំបន់ B' : activeZone.zoneType === 'Zone C' ? 'តំបន់ C' : 'តំបន់ D'}) <br />
                 <span className="font-bold text-slate-800 font-display">កម្រិតហានិភ័យ៖</span> {getRiskTranslation(activeZone.riskLevel)} <br />
                 <span className="font-bold text-slate-800 font-display">ចំនួនបុគ្គលិកអប្បបរមាដែលត្រូវការ៖</span> {activeZone.minStaffRequired} នាក់
               </div>

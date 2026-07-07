@@ -32,7 +32,7 @@ export default function ZoneSection({
   const [minStaff, setMinStaff] = useState(1);
   const [description, setDescription] = useState('');
 
-  const floors: DutyZone['floor'][] = ['Ground', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor', '5th Floor'];
+  const floors: DutyZone['floor'][] = ['Ground', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor', '5th Floor', '6th Floor', '3rd-6th Floors'];
 
   const getFloorTranslation = (fl: string) => {
     switch (fl) {
@@ -42,6 +42,8 @@ export default function ZoneSection({
       case '3rd Floor': return 'ជាន់ទី ៣';
       case '4th Floor': return 'ជាន់ទី ៤';
       case '5th Floor': return 'ជាន់ទី ៥';
+      case '6th Floor': return 'ជាន់ទី ៦';
+      case '3rd-6th Floors': return 'ជាន់ទី ៣ ដល់ទី ៦';
       default: return 'ក្រៅអគារ';
     }
   };
@@ -121,9 +123,10 @@ export default function ZoneSection({
 
   const getZoneTypeTranslation = (type: string) => {
     switch (type) {
-      case 'Zone A': return 'តំបន់ A (ទីធ្លារួម)';
-      case 'Zone B': return 'តំបន់ B (បន្ទប់ទឹក/ច្រករបៀង)';
-      case 'Zone D': return 'តំបន់ D (ច្រកចេញចូល)';
+      case 'Zone A': return 'តំបន់ A (ជាន់ផ្ទាល់ដី)';
+      case 'Zone B': return 'តំបន់ B (ជាន់ទី ១)';
+      case 'Zone C': return 'តំបន់ C (ជាន់ទី ២)';
+      case 'Zone D': return 'តំបន់ D (ជាន់ទី ៣ ដល់ទី ៦)';
       default: return type;
     }
   };
@@ -258,9 +261,10 @@ export default function ZoneSection({
             className="px-3 py-2 text-sm rounded-md border border-slate-200 focus:outline-hidden focus:border-indigo-500 bg-white text-slate-700 font-bold font-display uppercase tracking-wider"
           >
             <option value="All">ប្រភេទតំបន់ទាំងអស់</option>
-            <option value="Zone A">តំបន់ A: ទីធ្លារួម</option>
-            <option value="Zone B">តំបន់ B: បន្ទប់ទឹក និងច្រករបៀង</option>
-            <option value="Zone D">តំបន់ D: ច្រកចេញចូល</option>
+            <option value="Zone A">តំបន់ A: ទីធ្លារួម (ជាន់ផ្ទាល់ដី)</option>
+            <option value="Zone B">តំបន់ B: ទីធ្លារួម (ជាន់ទី ១)</option>
+            <option value="Zone C">តំបន់ C: ទីធ្លារួម (ជាន់ទី ២)</option>
+            <option value="Zone D">តំបន់ D: ទីធ្លារួម (ជាន់ទី ៣ ដល់ទី ៦)</option>
           </select>
         </div>
 
@@ -285,7 +289,7 @@ export default function ZoneSection({
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="inline-block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1 font-display">
-                      {zone.zoneType === 'Zone A' ? 'តំបន់ A' : zone.zoneType === 'Zone B' ? 'តំបន់ B' : 'តំបន់ D'} • {getFloorTranslation(zone.floor)}
+                      {zone.zoneType === 'Zone A' ? 'តំបន់ A' : zone.zoneType === 'Zone B' ? 'តំបន់ B' : zone.zoneType === 'Zone C' ? 'តំបន់ C' : 'តំបន់ D'} • {getFloorTranslation(zone.floor)}
                     </span>
                     <h3 className="font-bold text-slate-900 text-base flex items-center gap-1.5 font-display">
                       <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
@@ -372,9 +376,10 @@ export default function ZoneSection({
                     onChange={(e) => setZoneType(e.target.value as ZoneType)}
                     className="w-full px-3 py-2 text-sm rounded-md border border-slate-200 focus:outline-hidden focus:border-indigo-500 bg-white text-slate-700"
                   >
-                    <option value="Zone A">តំបន់ A (ទីធ្លារួម)</option>
-                    <option value="Zone B">តំបន់ B (បន្ទប់ទឹក/ច្រករបៀង)</option>
-                    <option value="Zone D">តំបន់ D (ច្រកចេញចូល)</option>
+                    <option value="Zone A">តំបន់ A (ជាន់ផ្ទាល់ដី)</option>
+                    <option value="Zone B">តំបន់ B (ជាន់ទី ១)</option>
+                    <option value="Zone C">តំបន់ C (ជាន់ទី ២)</option>
+                    <option value="Zone D">តំបន់ D (ជាន់ទី ៣ ដល់ទី ៦)</option>
                   </select>
                 </div>
 
@@ -391,6 +396,8 @@ export default function ZoneSection({
                     <option value="3rd Floor">ជាន់ទី ៣</option>
                     <option value="4th Floor">ជាន់ទី ៤</option>
                     <option value="5th Floor">ជាន់ទី ៥</option>
+                    <option value="6th Floor">ជាន់ទី ៦</option>
+                    <option value="3rd-6th Floors">ជាន់ទី ៣ ដល់ទី ៦</option>
                     <option value="N/A">ក្រៅអគារ (ទីធ្លាក្រៅ)</option>
                   </select>
                 </div>
@@ -502,7 +509,7 @@ export default function ZoneSection({
 
               <div className="space-y-1">
                 <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-[9px] font-bold rounded-full uppercase tracking-wider">
-                  {activeQrZone.zoneType === 'Zone A' ? 'តំបន់ A' : activeQrZone.zoneType === 'Zone B' ? 'តំបន់ B' : 'តំបន់ D'} • {getFloorTranslation(activeQrZone.floor)}
+                  {activeQrZone.zoneType === 'Zone A' ? 'តំបន់ A' : activeQrZone.zoneType === 'Zone B' ? 'តំបន់ B' : activeQrZone.zoneType === 'Zone C' ? 'តំបន់ C' : 'តំបន់ D'} • {getFloorTranslation(activeQrZone.floor)}
                 </span>
                 <h4 className="text-lg font-extrabold text-slate-950 pt-1">{activeQrZone.name}</h4>
               </div>

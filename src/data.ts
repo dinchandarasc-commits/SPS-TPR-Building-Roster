@@ -126,127 +126,147 @@ export const INITIAL_STAFF: StaffProfile[] = [
 ];
 
 export const INITIAL_ZONES: DutyZone[] = [
-  // Zone A: Common Areas (Football field, Garden, Playground, Cafeteria, Reading Corner, Classrooms)
+  // Zone A: Ground Floor - Common Areas
   {
     id: 'z-a1',
     zoneType: 'Zone A',
-    name: 'តារាងបាល់ទាត់ និងទីលានកីឡា',
+    name: 'តារាងបាល់ទាត់',
     floor: 'Ground',
     riskLevel: 'Medium',
     minStaffRequired: 2,
-    description: 'ទីលានកីឡាក្រៅអគារ។ ជាតំបន់សកម្មភាពខ្ពស់ ងាយមានរបួសកីឡា ឬការប្រមូលផ្តុំសិស្សអំឡុងពេលចេញលេង។'
+    description: 'តំបន់ទីធ្លារួមជាន់ផ្ទាល់ដី - តារាងបាល់ទាត់សម្រាប់សកម្មភាពកីឡា និងការលេងកម្សាន្តរបស់សិស្ស។'
   },
   {
     id: 'z-a2',
     zoneType: 'Zone A',
-    name: 'សួនច្បារ និងទីធ្លាសាលារៀន',
+    name: 'សួនច្បារ',
     floor: 'Ground',
     riskLevel: 'Low',
     minStaffRequired: 1,
-    description: 'តំបន់សួនច្បារស្ងប់ស្ងាត់។ ត្រូវការការត្រួតពិនិត្យទូទៅដើម្បីជៀសវាងការចោលសំរាម ឬសិស្សលាក់ខ្លួន។'
+    description: 'តំបន់ទីធ្លារួមជាន់ផ្ទាល់ដី - សួនច្បារសម្រាប់សិស្សសម្រាកលំហែកាយ និងបង្ការការចោលសំរាម។'
   },
   {
     id: 'z-a3',
     zoneType: 'Zone A',
-    name: 'សួនកុមារធំ (កន្លែងលេងក្មេង)',
+    name: 'PLAYGROUND',
     floor: 'Ground',
     riskLevel: 'High',
     minStaffRequired: 2,
-    description: 'កន្លែងដែលមានឧបករណ៍លេងសកម្ម។ ហានិភ័យខ្ពស់នៃការរអិល ដួល ឬការឈ្លោះប្រកែកគ្នារវាងមិត្តភក្តិ។'
+    description: 'តំបន់ទីធ្លារួមជាន់ផ្ទាល់ដី - កន្លែងលេងកុមារដែលមានឧបករណ៍លេងសកម្ម ត្រូវការការតាមដានខ្ពស់។'
   },
   {
     id: 'z-a4',
     zoneType: 'Zone A',
-    name: 'អាហារដ្ឋាន និងសាលភោជនីយដ្ឋាន',
+    name: 'មុខបន្ទប់ទឹក',
     floor: 'Ground',
-    riskLevel: 'High',
-    minStaffRequired: 3,
-    description: 'កន្លែងទទួលទានអាហារកណ្តាល។ មានភាពកកកុញខ្លាំងអំឡុងម៉ោងអាហារថ្ងៃត្រង់ និងហានិភ័យរអិលដួល។'
+    riskLevel: 'Medium',
+    minStaffRequired: 1,
+    description: 'តំបន់ទីធ្លារួមជាន់ផ្ទាល់ដី - មុខបន្ទប់ទឹកជាន់ផ្ទាល់ដី ការពារការរអិលដួល និងរក្សាសណ្តាប់ធ្នាប់។'
   },
   {
     id: 'z-a5',
     zoneType: 'Zone A',
-    name: 'ជ្រុងអានសៀវភៅ និងច្រកចូលបណ្ណាល័យ',
-    floor: '1st Floor',
-    riskLevel: 'Low',
+    name: 'មុខបន្ទប់កុំព្យូទ័រ',
+    floor: 'Ground',
+    riskLevel: 'Medium',
     minStaffRequired: 1,
-    description: 'តំបន់សិក្សាស្ងប់ស្ងាត់។ ត្រូវការការតាមដានស្រាលៗដើម្បីរក្សារបៀបរៀបរយ និងកម្រិតសំឡេង។'
+    description: 'តំបន់ទីធ្លារួមជាន់ផ្ទាល់ដី - មុខបន្ទប់កុំព្យូទ័រ តាមដានការចេញចូល និងសុវត្ថិភាពសម្ភារៈ។'
   },
   {
     id: 'z-a6',
     zoneType: 'Zone A',
-    name: 'ច្រករបៀងមុខបន្ទប់រៀនធំ',
-    floor: '2nd Floor',
-    riskLevel: 'Medium',
+    name: 'មុខបន្ទប់ Receptionist',
+    floor: 'Ground',
+    riskLevel: 'Low',
     minStaffRequired: 1,
-    description: 'តំបន់ថ្នាក់រៀនទូទៅ។ ត្រួតពិនិត្យការរត់លេងតាមរបៀង ឬការចូលបន្ទប់រៀនអំឡុងពេលសម្រាក។'
+    description: 'តំបន់ទីធ្លារួមជាន់ផ្ទាល់ដី - មុខការិយាល័យទទួលភ្ញៀវ និងច្រកចូលធំសាលារៀន។'
+  },
+  {
+    id: 'z-a7',
+    zoneType: 'Zone A',
+    name: 'មុខទូរទស្សន៍',
+    floor: 'Ground',
+    riskLevel: 'Low',
+    minStaffRequired: 1,
+    description: 'តំបន់ទីធ្លារួមជាន់ផ្ទាល់ដី - មុខទូរទស្សន៍ព័ត៌មាន ជាកន្លែងដែលសិស្សចូលចិត្តប្រមូលផ្តុំ។'
   },
 
-  // Zone B: Restroom Entrances and Corridors by floor (1st Floor to 5th Floor)
+  // Zone B: 1st Floor - Common Areas
   {
     id: 'z-b1',
     zoneType: 'Zone B',
-    name: 'បន្ទប់ទឹក និងច្រករបៀង - ជាន់ទី ១',
+    name: 'អាហារដ្ឋាន',
     floor: '1st Floor',
-    riskLevel: 'Medium',
-    minStaffRequired: 1,
-    description: 'បន្ទប់រង់ចាំ និងច្រករបៀងបន្ទប់ទឹក។ ហានិភ័យខ្ពស់នៃការរអិលលើឥដ្ឋ ការកកកុញ ឬការលាក់ខ្លួនលេង។'
+    riskLevel: 'High',
+    minStaffRequired: 2,
+    description: 'តំបន់ទីធ្លារួមជាន់ទី១ - អាហារដ្ឋានកណ្តាលសាលា កន្លែងទិញអាហារ និងទទួលទានអាហារដែលមានសិស្សកកកុញខ្លាំង។'
   },
   {
     id: 'z-b2',
     zoneType: 'Zone B',
-    name: 'បន្ទប់ទឹក និងច្រករបៀង - ជាន់ទី ២',
-    floor: '2nd Floor',
-    riskLevel: 'Medium',
+    name: 'READING CORNER',
+    floor: '1st Floor',
+    riskLevel: 'Low',
     minStaffRequired: 1,
-    description: 'បន្ទប់រង់ចាំ និងច្រករបៀងបន្ទប់ទឹក។ ហានិភ័យមធ្យម តាមដានដើម្បីបង្ការការរត់លេង និងការលួចលាក់ធ្វើរឿងមិនសមរម្យ។'
+    description: 'តំបន់ទីធ្លារួមជាន់ទី១ - ជ្រុងអានសៀវភៅ សម្រាប់សិស្សអានសៀវភៅ និងសិក្សាដោយស្ងប់ស្ងាត់។'
   },
   {
     id: 'z-b3',
     zoneType: 'Zone B',
-    name: 'បន្ទប់ទឹក និងច្រករបៀង - ជាន់ទី ៣',
-    floor: '3rd Floor',
+    name: 'ក្បែរជណ្តើរមុខ',
+    floor: '1st Floor',
     riskLevel: 'Medium',
     minStaffRequired: 1,
-    description: 'បន្ទប់រង់ចាំ និងច្រករបៀងបន្ទប់ទឹក។ ជាន់ដែលមានហានិភ័យខ្ពស់ ត្រូវការការមើលឃើញច្បាស់អំឡុងពេលសម្រាក។'
+    description: 'តំបន់ទីធ្លារួមជាន់ទី១ - ក្បែរជណ្តើរមុខ ការពារការរត់លេង ឬរអិលដួលឡើងចុះជណ្តើរ។'
   },
   {
     id: 'z-b4',
     zoneType: 'Zone B',
-    name: 'បន្ទប់ទឹក និងច្រករបៀង - ជាន់ទី ៤',
-    floor: '4th Floor',
-    riskLevel: 'High',
+    name: 'ក្បែរជណ្តើរក្រោយ',
+    floor: '1st Floor',
+    riskLevel: 'Medium',
     minStaffRequired: 1,
-    description: 'បន្ទប់រង់ចាំ និងច្រករបៀងបន្ទប់ទឹកជាន់ខ្ពស់។ តាមដានដើម្បីជៀសវាងការបង្កជម្លោះ ឬការលួចលាក់ជក់បារី/បារីអេឡិចត្រូនិក។'
-  },
-  {
-    id: 'z-b5',
-    zoneType: 'Zone B',
-    name: 'បន្ទប់ទឹក និងច្រករបៀង - ជាន់ទី ៥',
-    floor: '5th Floor',
-    riskLevel: 'High',
-    minStaffRequired: 1,
-    description: 'បន្ទប់ទឹក និងជណ្តើរជាន់ខ្ពស់បំផុត។ ជាតំបន់ដាច់ស្រយាល ងាយនឹងមានគ្រោះថ្នាក់បំផុត ប្រសិនបើគ្មានការយាមកាម។'
+    description: 'តំបន់ទីធ្លារួមជាន់ទី១ - ក្បែរជណ្តើរក្រោយ និងច្រករបៀងខាងក្រោយអាគារ។'
   },
 
-  // Zone D: School Entrances and Exits
+  // Zone C: 2nd Floor - Common Areas
+  {
+    id: 'z-c1',
+    zoneType: 'Zone C',
+    name: 'ក្បែរជណ្តើរមុខ',
+    floor: '2nd Floor',
+    riskLevel: 'Medium',
+    minStaffRequired: 1,
+    description: 'តំបន់ទីធ្លារួមជាន់ទី២ - ក្បែរជណ្តើរមុខ តាមដានការឡើងចុះ និងរក្សាសណ្តាប់ធ្នាប់របៀងជាន់ទី២។'
+  },
+  {
+    id: 'z-c2',
+    zoneType: 'Zone C',
+    name: 'ក្បែរជណ្តើរក្រោយ',
+    floor: '2nd Floor',
+    riskLevel: 'Medium',
+    minStaffRequired: 1,
+    description: 'តំបន់ទីធ្លារួមជាន់ទី២ - ក្បែរជណ្តើរក្រោយ ការពារសុវត្ថិភាពសិស្សតាមច្រកចេញអាសន្នខាងក្រោយ។'
+  },
+
+  // Zone D: 3rd to 6th Floor - Common Areas
   {
     id: 'z-d1',
     zoneType: 'Zone D',
-    name: 'ខ្លោងទ្វារធំមុខសាលា និងប៉ុស្តិ៍យាម',
-    floor: 'Ground',
-    riskLevel: 'High',
-    minStaffRequired: 2,
-    description: 'ច្រកចូលសាធារណៈចម្បង។ ចរាចរណ៍មមាញឹក កត់ត្រាភ្ញៀវចូល និងទប់ស្កាត់ការចេញក្រៅដោយគ្មានការអនុញ្ញាតពីសិស្ស។'
+    name: 'ក្បែរជណ្តើរមុខ',
+    floor: '3rd-6th Floors',
+    riskLevel: 'Medium',
+    minStaffRequired: 1,
+    description: 'តំបន់ទីធ្លារួមជាន់ទី៣ ដល់ទី៦ - ក្បែរជណ្តើរមុខ តាមដាន និងការពារសុវត្ថិភាពសិស្សនៅជាន់ខ្ពស់ៗ។'
   },
   {
     id: 'z-d2',
     zoneType: 'Zone D',
-    name: 'ច្រកចេញខាងក្រោយ និងផ្លូវចូលចំណតរថយន្ត',
-    floor: 'Ground',
-    riskLevel: 'High',
+    name: 'ក្បែរជណ្តើរក្រោយ',
+    floor: '3rd-6th Floors',
+    riskLevel: 'Medium',
     minStaffRequired: 1,
-    description: 'ទ្វារចេញចូលសម្រាប់យានយន្តបុគ្គលិក និងរថយន្តដឹកសិស្ស។ មានគ្រោះថ្នាក់ចរាចរណ៍ និងចំណុចងងឹតមើលមិនឃើញ។'
+    description: 'តំបន់ទីធ្លារួមជាន់ទី៣ ដល់ទី៦ - ក្បែរជណ្តើរក្រោយ តាមដានច្រករបៀង និងបង្ការគ្រោះថ្នាក់នានា។'
   }
 ];
 
@@ -310,7 +330,7 @@ export const INITIAL_ROSTER: RosterEntry[] = [
     id: 'r-1',
     day: 'Monday',
     shiftId: 'sh-1',
-    zoneId: 'z-d1', // Front gate
+    zoneId: 'z-a1', // Football field
     staffIds: ['s-1', 's-2'], // Security staff
     status: 'Checked-In'
   },
@@ -326,7 +346,7 @@ export const INITIAL_ROSTER: RosterEntry[] = [
     id: 'r-3',
     day: 'Monday',
     shiftId: 'sh-5',
-    zoneId: 'z-a4', // Cafeteria
+    zoneId: 'z-b1', // Cafeteria
     staffIds: ['m-2', 't-3', 't-4'], // Vice Principal + Teachers
     status: 'Completed'
   },
@@ -334,7 +354,7 @@ export const INITIAL_ROSTER: RosterEntry[] = [
     id: 'r-4',
     day: 'Monday',
     shiftId: 'sh-6',
-    zoneId: 'z-b5', // 5th Floor
+    zoneId: 'z-d1', // 3rd-6th front stairs
     staffIds: ['t-5'], // Xavier / Sarath
     status: 'Completed'
   },
@@ -344,7 +364,7 @@ export const INITIAL_ROSTER: RosterEntry[] = [
     id: 'r-5',
     day: 'Tuesday',
     shiftId: 'sh-1',
-    zoneId: 'z-d1', // Front Gate
+    zoneId: 'z-a3', // Playground
     staffIds: ['s-1', 's-3'], // Security staff
     status: 'Assigned'
   },
@@ -352,7 +372,7 @@ export const INITIAL_ROSTER: RosterEntry[] = [
     id: 'r-6',
     day: 'Tuesday',
     shiftId: 'sh-5',
-    zoneId: 'z-a4', // Cafeteria
+    zoneId: 'z-b1', // Cafeteria
     staffIds: ['t-6', 't-7', 'm-3'], // Teachers + Office chief
     status: 'Assigned'
   },
@@ -360,7 +380,7 @@ export const INITIAL_ROSTER: RosterEntry[] = [
     id: 'r-7',
     day: 'Tuesday',
     shiftId: 'sh-2',
-    zoneId: 'z-b4', // 4th floor restroom
+    zoneId: 'z-b4', // 1st floor back stairs
     staffIds: ['t-2'], // Socheata
     status: 'Assigned'
   },
@@ -370,7 +390,7 @@ export const INITIAL_ROSTER: RosterEntry[] = [
     id: 'r-8',
     day: 'Wednesday',
     shiftId: 'sh-1',
-    zoneId: 'z-d1',
+    zoneId: 'z-a1',
     staffIds: ['s-2', 's-3'],
     status: 'Assigned'
   },
@@ -388,7 +408,7 @@ export const INITIAL_ROSTER: RosterEntry[] = [
     id: 'r-10',
     day: 'Thursday',
     shiftId: 'sh-5',
-    zoneId: 'z-a4', // Cafeteria
+    zoneId: 'z-b1', // Cafeteria
     staffIds: ['t-3', 't-4', 'm-1'], // Teachers + Principal
     status: 'Assigned'
   },
@@ -398,7 +418,7 @@ export const INITIAL_ROSTER: RosterEntry[] = [
     id: 'r-11',
     day: 'Friday',
     shiftId: 'sh-8',
-    zoneId: 'z-d2', // Rear exit
+    zoneId: 'z-d2', // 3rd-6th back stairs
     staffIds: ['s-2'], // Vanna
     status: 'Assigned'
   }
