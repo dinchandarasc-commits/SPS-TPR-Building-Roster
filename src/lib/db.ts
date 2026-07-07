@@ -1,6 +1,6 @@
 import { collection, doc, getDocs, getDoc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, OperationType, handleFirestoreError } from './firebase.ts';
-import { StaffProfile, DutyZone, RosterEntry, IncidentReport } from '../types';
+import { StaffProfile, DutyZone, RosterEntry, IncidentReport, Shift } from '../types';
 
 // Load all staff profiles
 export async function loadStaff(): Promise<StaffProfile[]> {
@@ -103,6 +103,61 @@ export async function saveFullZones(zones: DutyZone[]): Promise<void> {
   }
 }
 
+// Load all shifts
+export async function loadShifts(): Promise<Shift[]> {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'shifts'));
+    const list: Shift[] = [];
+    querySnapshot.forEach((doc) => {
+      list.push(doc.data() as Shift);
+    });
+    return list;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'shifts');
+  }
+}
+
+// Save/update a single shift
+export async function saveShift(shift: Shift): Promise<void> {
+  try {
+    await setDoc(doc(db, 'shifts', shift.id), shift);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `shifts/${shift.id}`);
+  }
+}
+
+// Delete a shift
+export async function deleteShift(id: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, 'shifts', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `shifts/${id}`);
+  }
+}
+
+// Save full shifts list and delete removed ones
+export async function saveFullShifts(shifts: Shift[]): Promise<void> {
+  try {
+    const existingShifts = await loadShifts();
+    const currentIds = new Set(shifts.map((s) => s.id));
+    const batch = writeBatch(db);
+
+    shifts.forEach((s) => {
+      batch.set(doc(db, 'shifts', s.id), s);
+    });
+
+    existingShifts.forEach((s) => {
+      if (!currentIds.has(s.id)) {
+        batch.delete(doc(db, 'shifts', s.id));
+      }
+    });
+
+    await batch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, 'shifts/full');
+  }
+}
+
 // Load weekly roster entries
 export async function loadRoster(): Promise<RosterEntry[]> {
   try {
@@ -187,6 +242,8 @@ export interface AppSettings {
   notificationSent: boolean;
   liveCheckInLogs: string[];
   escalationAlerts: any[];
+  targetLat?: number;
+  targetLon?: number;
 }
 
 // Load global configuration settings
@@ -217,13 +274,15 @@ export async function seedDatabaseIfEmpty(
   initialZones: DutyZone[],
   initialRoster: RosterEntry[],
   initialIncidents: IncidentReport[],
-  defaultSettings: AppSettings
+  defaultSettings: AppSettings,
+  initialShifts: Shift[]
 ): Promise<{
   staff: StaffProfile[];
   zones: DutyZone[];
   roster: RosterEntry[];
   incidents: IncidentReport[];
   settings: AppSettings;
+  shifts: Shift[];
 }> {
   try {
     const batch = writeBatch(db);
@@ -281,6 +340,19 @@ export async function seedDatabaseIfEmpty(
       incidentsSnap.forEach((doc) => finalIncidents.push(doc.data() as IncidentReport));
     }
 
+    // 4.5 Check and seed shifts
+    const shiftsSnap = await getDocs(collection(db, 'shifts'));
+    let finalShifts = initialShifts;
+    if (shiftsSnap.empty) {
+      initialShifts.forEach((sh) => {
+        batch.set(doc(db, 'shifts', sh.id), sh);
+      });
+      seeded = true;
+    } else {
+      finalShifts = [];
+      shiftsSnap.forEach((doc) => finalShifts.push(doc.data() as Shift));
+    }
+
     // 5. Check and seed settings
     const settingsSnap = await getDoc(doc(db, 'settings', 'config'));
     let finalSettings = defaultSettings;
@@ -302,6 +374,7 @@ export async function seedDatabaseIfEmpty(
       roster: finalRoster,
       incidents: finalIncidents,
       settings: finalSettings,
+      shifts: finalShifts,
     };
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'seed');

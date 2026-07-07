@@ -372,7 +372,7 @@ export default function RosterBoard({
             {/* Staff checklist list */}
             <div className="overflow-y-auto flex-1 py-2 pr-1 space-y-2">
               <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 font-display">បញ្ជីឈ្មោះបុគ្គលិកសាលារៀន</h4>
-              {staff.map((member) => {
+              {staff.filter((member) => member.role !== 'Management').map((member) => {
                 const isSelected = currentlyAssignedIds.includes(member.id);
                 return (
                   <div

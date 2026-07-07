@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StaffProfile, DutyZone, RosterEntry, SafetyAuditResult, IncidentReport } from './types';
+import { StaffProfile, DutyZone, RosterEntry, SafetyAuditResult, IncidentReport, Shift } from './types';
 import { INITIAL_STAFF, INITIAL_ZONES, SHIFTS, INITIAL_ROSTER } from './data';
 import StaffSection from './components/StaffSection';
 import ZoneSection from './components/ZoneSection';
@@ -8,8 +8,9 @@ import SafetyAuditPanel from './components/SafetyAuditPanel';
 import CampusMap from './components/CampusMap';
 import StaffView from './components/StaffView';
 import AnalyticsView from './components/AnalyticsView';
-import { Shield, Users, MapPin, Calendar, HelpCircle, CheckSquare, Sparkles, RefreshCw, AlertTriangle, Info, Sliders, ShieldCheck, Play, CheckCircle2, XCircle, ArrowRight, Search, MessageSquare, Bell, BellOff, Send, Check, ShieldAlert, User, QrCode, Clock, ArrowLeftRight, Camera, BarChart3, AlertOctagon, HelpCircle as HelpIcon, FileText } from 'lucide-react';
-import { seedDatabaseIfEmpty, saveFullStaff, saveFullZones, saveFullRoster, saveFullIncidents, saveSettings, AppSettings } from './lib/db.ts';
+import { Shield, Users, MapPin, Calendar, HelpCircle, CheckSquare, Sparkles, RefreshCw, AlertTriangle, Info, Sliders, ShieldCheck, Play, CheckCircle2, XCircle, ArrowRight, Search, MessageSquare, Bell, BellOff, Send, Check, ShieldAlert, User, QrCode, Clock, ArrowLeftRight, Camera, BarChart3, AlertOctagon, HelpCircle as HelpIcon, FileText, Plus, X, Edit, Trash2, Lock, Unlock, Key, Settings } from 'lucide-react';
+import { seedDatabaseIfEmpty, saveFullStaff, saveFullZones, saveFullRoster, saveFullIncidents, saveSettings, AppSettings, saveFullShifts } from './lib/db.ts';
+import LoginPortal from './components/LoginPortal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'roster' | 'staff' | 'zones' | 'audit'>('roster');
@@ -20,6 +21,10 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_STAFF;
   });
 
+  const [activeLoggedStaffId, setActiveLoggedStaffId] = useState<string>(() => {
+    return localStorage.getItem('school_safety_active_logged_staff_id') || 't-1';
+  });
+
   const [zones, setZones] = useState<DutyZone[]>(() => {
     const saved = localStorage.getItem('school_safety_zones');
     return saved ? JSON.parse(saved) : INITIAL_ZONES;
@@ -28,6 +33,11 @@ export default function App() {
   const [roster, setRoster] = useState<RosterEntry[]>(() => {
     const saved = localStorage.getItem('school_safety_roster');
     return saved ? JSON.parse(saved) : INITIAL_ROSTER;
+  });
+
+  const [shifts, setShifts] = useState<Shift[]>(() => {
+    const saved = localStorage.getItem('school_safety_shifts');
+    return saved ? JSON.parse(saved) : SHIFTS;
   });
 
   const [auditResult, setAuditResult] = useState<SafetyAuditResult | null>(() => {
@@ -103,6 +113,12 @@ export default function App() {
   const [swapToStaffId, setSwapToStaffId] = useState<string>('');
   const [swapStatus, setSwapStatus] = useState<'idle' | 'pending' | 'accepted' | 'declined'>('idle');
 
+  // Shift Management States
+  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
+  const [shiftName, setShiftName] = useState<string>('');
+  const [shiftTimeSlot, setShiftTimeSlot] = useState<string>('');
+  const [isShiftFormOpen, setIsShiftFormOpen] = useState<boolean>(false);
+
   // Selected Simulation Variables
   const [liveSelectedEntryId, setLiveSelectedEntryId] = useState<string>('');
   const [liveSelectedBackupStaffId, setLiveSelectedBackupStaffId] = useState<string>('');
@@ -111,8 +127,73 @@ export default function App() {
 
   // Perspective Views (Admin, Staff, Analytics)
   const [currentPerspective, setCurrentPerspective] = useState<'admin' | 'staff' | 'analytics'>(() => {
-    return (localStorage.getItem('school_safety_perspective') as 'admin' | 'staff' | 'analytics') || 'admin';
+    // Default to 'staff' if not admin
+    const savedPerspective = localStorage.getItem('school_safety_perspective');
+    const savedAdminMode = localStorage.getItem('school_safety_is_admin_mode') === 'true';
+    if (!savedAdminMode && (savedPerspective === 'admin' || savedPerspective === 'analytics')) {
+      return 'staff';
+    }
+    return (savedPerspective as 'admin' | 'staff' | 'analytics') || 'staff';
   });
+
+  // Admin Permission / Separate Access Rights States
+  const [isAdminMode, setIsAdminMode] = useState<boolean>(() => {
+    return localStorage.getItem('school_safety_is_admin_mode') === 'true';
+  });
+  const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState<boolean>(false);
+  const [passcodeInput, setPasscodeInput] = useState<string>('');
+  const [passcodeError, setPasscodeError] = useState<string | null>(null);
+  const [pendingPerspective, setPendingPerspective] = useState<'admin' | 'analytics' | null>(null);
+
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    return localStorage.getItem('school_safety_is_logged_in') === 'true';
+  });
+
+  const [targetLat, setTargetLat] = useState<number>(() => {
+    const saved = localStorage.getItem('school_safety_target_lat');
+    return saved ? parseFloat(saved) : 11.556400;
+  });
+
+  const [targetLon, setTargetLon] = useState<number>(() => {
+    const saved = localStorage.getItem('school_safety_target_lon');
+    return saved ? parseFloat(saved) : 104.928200;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('school_safety_target_lat', targetLat.toString());
+  }, [targetLat]);
+
+  useEffect(() => {
+    localStorage.setItem('school_safety_target_lon', targetLon.toString());
+  }, [targetLon]);
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setIsAdminMode(false);
+    setCurrentPerspective('staff');
+    localStorage.removeItem('school_safety_is_logged_in');
+    localStorage.removeItem('school_safety_is_admin_mode');
+    localStorage.setItem('school_safety_active_logged_staff_id', 't-1');
+    setActiveLoggedStaffId('t-1');
+  };
+
+  // Strict Route Guard & Role Verification Gate
+  useEffect(() => {
+    localStorage.setItem('school_safety_is_admin_mode', isAdminMode ? 'true' : 'false');
+    
+    if (!isLoggedIn) return;
+    
+    const activeUser = staff.find(s => s.id === activeLoggedStaffId);
+    if (!activeUser) return;
+    
+    const isUserAdmin = activeUser.role === 'Management';
+    
+    if ((currentPerspective === 'admin' || currentPerspective === 'analytics') && (!isAdminMode || !isUserAdmin)) {
+      setCurrentPerspective('staff');
+      setIsAdminMode(false);
+      setWarning('⚠️ [ប្រព័ន្ធការពារទំព័រ - Route Guard] បដិសេធការចូល៖ លោកអ្នកគ្មានសិទ្ធិជាអភិបាល (Admin) ឡើយ! ប្រព័ន្ធបានបញ្ជូនលោកអ្នកត្រឡប់ទៅទំព័រ Staff View វិញ។');
+    }
+  }, [isAdminMode, currentPerspective, isLoggedIn, activeLoggedStaffId, staff]);
 
   // Incident & Safety Reporting States
   const [incidents, setIncidents] = useState<IncidentReport[]>(() => {
@@ -164,11 +245,8 @@ export default function App() {
 
   // Additional Interactive Simulator States
   const [isScanningQR, setIsScanningQR] = useState<boolean>(false);
-  const [selectedScanEntryId, setSelectedScanEntryId] = useState<string>('');
+  const [selectedScanEntryId, setSelectedScanEntryId] = useState<string>();
   const [scanSuccessMessage, setScanSuccessMessage] = useState<string | null>(null);
-  const [activeLoggedStaffId, setActiveLoggedStaffId] = useState<string>(() => {
-    return localStorage.getItem('school_safety_active_logged_staff_id') || 't-1';
-  });
   const [incidentReportSuccess, setIncidentReportSuccess] = useState<boolean>(false);
   const [activeReportDrawer, setActiveReportDrawer] = useState<boolean>(false);
 
@@ -189,7 +267,9 @@ export default function App() {
           approvedAt,
           notificationSent,
           liveCheckInLogs,
-          escalationAlerts
+          escalationAlerts,
+          targetLat,
+          targetLon
         };
 
         const result = await seedDatabaseIfEmpty(
@@ -197,7 +277,8 @@ export default function App() {
           INITIAL_ZONES,
           INITIAL_ROSTER,
           incidents,
-          defaultSettings
+          defaultSettings,
+          SHIFTS
         );
 
         // Synchronize remote database results to react state
@@ -205,6 +286,8 @@ export default function App() {
         setZones(result.zones);
         setRoster(result.roster);
         setIncidents(result.incidents);
+        setShifts(result.shifts);
+        localStorage.setItem('school_safety_shifts', JSON.stringify(result.shifts));
 
         setMinStaffZoneA(result.settings.minStaffZoneA);
         setMinStaffZoneB(result.settings.minStaffZoneB);
@@ -216,6 +299,12 @@ export default function App() {
         setNotificationSent(result.settings.notificationSent || false);
         setLiveCheckInLogs(result.settings.liveCheckInLogs || []);
         setEscalationAlerts(result.settings.escalationAlerts || []);
+        if (result.settings.targetLat !== undefined) {
+          setTargetLat(result.settings.targetLat);
+        }
+        if (result.settings.targetLon !== undefined) {
+          setTargetLon(result.settings.targetLon);
+        }
 
         setDbLoaded(true);
       } catch (err) {
@@ -347,7 +436,7 @@ export default function App() {
     if (!entry) return;
 
     const zone = zones.find(z => z.id === entry.zoneId);
-    const shift = SHIFTS.find(s => s.id === entry.shiftId);
+    const shift = shifts.find(s => s.id === entry.shiftId);
     const primaryStaff = staff.find(s => s.id === entry.staffIds[0]) || staff[0];
 
     // Create a unique escalation alert
@@ -480,6 +569,38 @@ export default function App() {
     setWarning('✨ រួចរាល់៖ រាល់ស្ថានភាព Check-in, ប្រកាសអាសន្ន និងការប្តូរវេនទាំងអស់ត្រូវបានកំណត់ឡើងវិញ! ');
   };
 
+  // Admin perspective switching & PIN verification handlers
+  const handlePerspectiveClick = (perspective: 'admin' | 'staff' | 'analytics') => {
+    if (perspective === 'staff') {
+      setCurrentPerspective('staff');
+      return;
+    }
+
+    if (isAdminMode) {
+      setCurrentPerspective(perspective);
+    } else {
+      setPendingPerspective(perspective);
+      setPasscodeInput('');
+      setPasscodeError(null);
+      setIsPasscodeModalOpen(true);
+    }
+  };
+
+  const handleVerifyPasscode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passcodeInput === '1234' || passcodeInput.toLowerCase() === 'admin') {
+      setIsAdminMode(true);
+      if (pendingPerspective) {
+        setCurrentPerspective(pendingPerspective);
+      }
+      setIsPasscodeModalOpen(false);
+      setPasscodeInput('');
+      setPasscodeError(null);
+    } else {
+      setPasscodeError('លេខកូដសម្ងាត់មិនត្រឹមត្រូវទេ! សូមព្យាយាមម្តងទៀត។ (PIN is incorrect)');
+    }
+  };
+
   // Sync state to local storage and Firestore
   useEffect(() => {
     localStorage.setItem('school_safety_staff', JSON.stringify(staff));
@@ -515,6 +636,13 @@ export default function App() {
     }
   }, [incidents, dbLoaded]);
 
+  useEffect(() => {
+    localStorage.setItem('school_safety_shifts', JSON.stringify(shifts));
+    if (dbLoaded) {
+      saveFullShifts(shifts);
+    }
+  }, [shifts, dbLoaded]);
+
   // Sync settings and simulated engine values to Firestore
   useEffect(() => {
     if (!dbLoaded) return;
@@ -528,7 +656,9 @@ export default function App() {
       approvedAt,
       notificationSent,
       liveCheckInLogs,
-      escalationAlerts
+      escalationAlerts,
+      targetLat,
+      targetLon
     });
   }, [
     dbLoaded,
@@ -541,7 +671,9 @@ export default function App() {
     approvedAt,
     notificationSent,
     liveCheckInLogs,
-    escalationAlerts
+    escalationAlerts,
+    targetLat,
+    targetLon
   ]);
 
   // Propagate Rule engine changes to zones dynamically
@@ -581,7 +713,7 @@ export default function App() {
     const days: ('Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday')[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
     days.forEach(day => {
-      SHIFTS.forEach(shift => {
+      shifts.forEach(shift => {
         zones.forEach(zone => {
           requiredSlots += zone.minStaffRequired;
           const entry = roster.find(r => r.day === day && r.shiftId === shift.id && r.zoneId === zone.id);
@@ -652,6 +784,31 @@ export default function App() {
     }
   };
 
+  // Shift Operations
+  const handleAddShift = (newShiftData: Omit<Shift, 'id'>) => {
+    const newShift: Shift = {
+      ...newShiftData,
+      id: `shift-${Date.now()}`
+    };
+    setShifts(prev => [...prev, newShift]);
+  };
+
+  const handleEditShift = (updatedShift: Shift) => {
+    setShifts(prev => prev.map(s => s.id === updatedShift.id ? updatedShift : s));
+  };
+
+  const handleDeleteShift = (id: string) => {
+    if (shifts.length <= 1) {
+      alert('សុំទោស! សាលាត្រូវតែមានវេនយាមយ៉ាងតិចមួយ។');
+      return;
+    }
+    if (window.confirm('តើអ្នកពិតជាចង់លុបវេនយាមនេះមែនទេ? រាល់ការចាត់តាំងដែលបានកំណត់ទៅកាន់វេននេះនឹងត្រូវបានលុបចេញទាំងស្រុង។')) {
+      setShifts(prev => prev.filter(s => s.id !== id));
+      // Remove assignments to this shift
+      setRoster(prev => prev.filter(entry => entry.shiftId !== id));
+    }
+  };
+
   // Roster Assignments
   const handleUpdateAssignment = (
     day: RosterEntry['day'],
@@ -710,7 +867,7 @@ export default function App() {
       const response = await fetch('/api/generate-roster', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ staff, zones, shifts: SHIFTS, currentRoster: roster })
+        body: JSON.stringify({ staff, zones, shifts: shifts, currentRoster: roster })
       });
       const data = await response.json();
       if (data.success) {
@@ -738,7 +895,7 @@ export default function App() {
       const response = await fetch('/api/safety-audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ staff, zones, shifts: SHIFTS, roster })
+        body: JSON.stringify({ staff, zones, shifts: shifts, roster })
       });
       const data = await response.json();
       if (data.success) {
@@ -849,6 +1006,27 @@ export default function App() {
     );
   }
 
+  if (!isLoggedIn) {
+    return (
+      <LoginPortal
+        staff={staff}
+        onLoginSuccess={(staffId, adminMode) => {
+          setActiveLoggedStaffId(staffId);
+          setIsAdminMode(adminMode);
+          setIsLoggedIn(true);
+          localStorage.setItem('school_safety_active_logged_staff_id', staffId);
+          localStorage.setItem('school_safety_is_admin_mode', adminMode ? 'true' : 'false');
+          localStorage.setItem('school_safety_is_logged_in', 'true');
+          if (adminMode) {
+            setCurrentPerspective('admin');
+          } else {
+            setCurrentPerspective('staff');
+          }
+        }}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans antialiased pb-12">
       {/* Top Warning Banner if Fallback or API issue */}
@@ -879,43 +1057,99 @@ export default function App() {
             <span className="text-xs font-bold text-slate-500">ទិដ្ឋភាពទូទៅប្រចាំសប្តាហ៍</span>
           </div>
           <div className="hidden md:block h-10 w-px bg-slate-200 mx-1"></div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 bg-slate-50 border border-slate-150 rounded-xl px-3 py-1.5 shadow-2xs">
             <div className="text-right">
-              <p className="text-xs sm:text-sm font-bold text-slate-800 font-display">ផ្ទាំងគ្រប់គ្រងរដ្ឋបាលសាលា</p>
-              <p className="text-[9px] sm:text-[10px] text-slate-500 uppercase tracking-widest">ប្រធានផ្នែកសុវត្ថិភាព</p>
+              <p className="text-xs sm:text-sm font-bold text-slate-800 font-display flex items-center gap-1.5 justify-end">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                {staff.find(s => s.id === activeLoggedStaffId)?.name || 'គណនីសាកល្បង'}
+              </p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                {(staff.find(s => s.id === activeLoggedStaffId)?.role === 'Management') 
+                  ? '💼 គណៈគ្រប់គ្រង (Admin)' 
+                  : (staff.find(s => s.id === activeLoggedStaffId)?.role === 'Security') 
+                  ? '👮 សន្តិសុខ (Staff)' 
+                  : '🧑‍🏫 គ្រូបង្រៀន (Staff)'}
+              </p>
             </div>
-            <div className="w-9 h-9 rounded-full bg-slate-200 border-2 border-indigo-100 flex items-center justify-center text-indigo-700 font-bold font-display text-sm">
-              CA
+            <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center font-bold font-display text-xs ${
+              staff.find(s => s.id === activeLoggedStaffId)?.role === 'Management' 
+                ? 'bg-rose-50 border-rose-200 text-rose-700' 
+                : staff.find(s => s.id === activeLoggedStaffId)?.role === 'Security'
+                ? 'bg-amber-50 border-amber-200 text-amber-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            }`}>
+              {(() => {
+                const name = staff.find(s => s.id === activeLoggedStaffId)?.name || 'ST';
+                return name.split(' ').pop()?.substring(0, 2) || 'ST';
+              })()}
             </div>
+            <button
+              onClick={handleLogout}
+              className="ml-1 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[10px] font-black uppercase px-2.5 py-1.5 rounded-lg border border-rose-200 transition-all active:scale-95 cursor-pointer flex items-center gap-1"
+              title="ចាកចេញពីគណនី (Log Out)"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">ចាកចេញ (Log Out)</span>
+            </button>
           </div>
         </div>
       </header>
 
       {/* THREE PERSPECTIVES TAB SELECTOR BAR */}
-      <div className="bg-slate-900 border-b border-slate-950 px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
-        <div className="flex items-center gap-2">
-          <Shield className="w-4 h-4 text-indigo-400" />
-          <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest font-mono">
-            ជ្រើសរើសរបៀបបង្ហាញកម្មវិធី (PERSPECTIVE SWITCHER):
-          </span>
+      <div className="bg-slate-900 border-b border-slate-950 px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4 shadow-md">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-indigo-400 animate-pulse" />
+            <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest font-mono">
+              របៀបបង្ហាញកម្មវិធី (PERSPECTIVE SWITCHER):
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {isAdminMode ? (
+              <span className="bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 text-[9px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1">
+                <Unlock className="w-3 h-3" />
+                <span>សិទ្ធិ៖ អភិបាល (ADMIN MODE 🔓)</span>
+              </span>
+            ) : (
+              <span className="bg-slate-800 border border-slate-700 text-slate-350 text-[9px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1">
+                <Lock className="w-3 h-3 text-slate-400" />
+                <span>សិទ្ធិ៖ បុគ្គលិកទូទៅ (STAFF MODE 🔒)</span>
+              </span>
+            )}
+
+            {isAdminMode && (
+              <button
+                onClick={() => {
+                  setIsAdminMode(false);
+                  setCurrentPerspective('staff');
+                }}
+                className="text-[9px] font-extrabold bg-rose-950/60 border border-rose-800/40 text-rose-300 hover:bg-rose-900/60 hover:text-white px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-0.5 animate-fadeIn"
+                title="ចាកចេញពី Admin (Lock perspective to Staff Mode)"
+              >
+                <Lock className="w-2.5 h-2.5" />
+                <span>ចាក់សោរវិញ (Lock Admin)</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
+        <div className="grid grid-cols-3 gap-2 w-full md:w-auto shrink-0">
           <button
-            onClick={() => setCurrentPerspective('admin')}
-            className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 ${
+            onClick={() => handlePerspectiveClick('admin')}
+            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 ${
               currentPerspective === 'admin'
                 ? 'bg-indigo-600 text-white shadow-xs'
                 : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-750'
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Admin Control</span>
+            <span>Admin Control {!isAdminMode && '🔒'}</span>
           </button>
 
           <button
-            onClick={() => setCurrentPerspective('staff')}
-            className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 ${
+            onClick={() => handlePerspectiveClick('staff')}
+            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 ${
               currentPerspective === 'staff'
                 ? 'bg-indigo-600 text-white shadow-xs'
                 : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-750'
@@ -926,15 +1160,15 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setCurrentPerspective('analytics')}
-            className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 ${
+            onClick={() => handlePerspectiveClick('analytics')}
+            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 ${
               currentPerspective === 'analytics'
                 ? 'bg-indigo-600 text-white shadow-xs'
                 : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-750'
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5" />
-            <span>Analytics</span>
+            <span>Analytics {!isAdminMode && '🔒'}</span>
           </button>
         </div>
       </div>
@@ -1286,6 +1520,275 @@ export default function App() {
                   <span>សកម្ម៖ ម៉ាស៊ីន AI និង Heuristic នឹងធានាថាលោកគ្រូអ្នកគ្រូជាប់ Duty អតិបរមាត្រឹម {maxWeeklyDutiesTeachers} ថ្ងៃប៉ុណ្ណោះក្នុងមួយសប្តាហ៍។</span>
                 </div>
               </div>
+
+              {/* កំណត់កូអរដោនេ និងចម្ងាយអនុញ្ញាតស្កែន (Geofencing / Company Location Coordinates Settings) */}
+              <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-200/80 space-y-3 mt-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 p-1 bg-teal-50 text-teal-700 rounded-lg border border-teal-100">
+                    <MapPin className="w-4 h-4 text-teal-700" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-bold text-xs text-slate-800">ទីតាំង និងកូអរដោនេបង្គោលសាលា (School GPS Coordinates)</p>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      កំណត់កូអរដោនេសម្រាប់ត្រួតពិនិត្យការចុះវត្តមានរបស់បុគ្គលិក។ ប្រព័ន្ធនឹងផ្ទៀងផ្ទាត់ Geofencing ធានាថាការស្កែនធ្វើឡើងក្នុងរង្វង់ ១០០ ម៉ែត្រជុំវិញបង្គោលសាលា។
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded-lg border border-slate-150">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase">Latitude (រយៈទទឹង)៖</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      className="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-250 p-2 rounded-md text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-teal-500"
+                      value={targetLat}
+                      onChange={(e) => setTargetLat(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase">Longitude (រយៈបណ្តោយ)៖</label>
+                    <input
+                      type="number"
+                      step="0.000001"
+                      className="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-250 p-2 rounded-md text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-teal-500"
+                      value={targetLon}
+                      onChange={(e) => setTargetLon(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition(
+                          (pos) => {
+                            setTargetLat(Number(pos.coords.latitude.toFixed(6)));
+                            setTargetLon(Number(pos.coords.longitude.toFixed(6)));
+                            alert(`ទាញយកកូអរដោនេបច្ចុប្បន្នជោគជ័យ៖ \nLat: ${pos.coords.latitude.toFixed(6)}\nLon: ${pos.coords.longitude.toFixed(6)}`);
+                          },
+                          (err) => {
+                            alert("មិនអាចទាញយកទីតាំង GPS របស់លោកអ្នកបានទេ៖ " + err.message);
+                          }
+                        );
+                      } else {
+                        alert("កម្មវិធីរុករក (Browser) របស់លោកអ្នកមិនគាំទ្រ Geolocation ឡើយ។");
+                      }
+                    }}
+                    className="flex-1 text-[11px] font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200/80 px-2.5 py-2 rounded-lg transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>ទាញយក GPS បច្ចុប្បន្ន (Get Current GPS)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      alert("រក្សាទុកទីតាំងបង្គោលសាលាទៅកាន់ប្រព័ន្ធ Cloud Firestore ជោគជ័យ!");
+                    }}
+                    className="flex-1 text-[11px] font-bold text-white bg-teal-600 hover:bg-teal-750 px-2.5 py-2 rounded-lg shadow-xs transition-all active:scale-95 cursor-pointer text-center"
+                  >
+                    រក្សាទុកជាផ្លូវការ (Save GPS)
+                  </button>
+                </div>
+
+                <div className="p-2 bg-amber-50 rounded-lg border border-amber-200 flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse"></span>
+                  <p className="text-[10px] text-amber-800 leading-tight">
+                    <strong>ចំណាំ៖</strong> ទីតាំងលំនាំដើមរបស់សាលាគឺ <strong>Phnom Penh 11.5564, 104.9282</strong>។ ប្រសិនបើលោកអ្នកស្ថិតនៅក្រៅបរិវេណនេះ ការធ្វើតេស្តស្កែន (Check-In) អាចនឹងត្រូវបានបដិសេធដោយ Geofencing Block ប្រសិនបើប្រើប្រាស់ទីតាំងពិត។
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 my-5" />
+
+          {/* ផ្នែកទី៣៖ គ្រប់គ្រងម៉ោងយាមល្បាត (Shift / Duty Hours Management) */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-600"></span>
+                  គ្រប់គ្រងម៉ោង និងវេនយាមល្បាត (Patrol Shift & Hours Management)
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  បន្ថែម កែប្រែ ឬលុបវេនយាមល្បាតប្រចាំការរបស់សាលារៀន។ រាល់ការកែប្រែនឹងត្រូវរក្សាទុកដោយស្វ័យប្រវត្តទៅក្នុងប្រព័ន្ធ Cloud Firestore។
+                </p>
+              </div>
+
+              {!isShiftFormOpen && (
+                <button
+                  onClick={() => {
+                    setEditingShiftId(null);
+                    setShiftName('');
+                    setShiftTimeSlot('');
+                    setIsShiftFormOpen(true);
+                  }}
+                  className="flex items-center gap-1 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md shadow-xs transition-all active:scale-95 self-start cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>បន្ថែមវេនយាមថ្មី (Add Shift)</span>
+                </button>
+              )}
+            </div>
+
+            {/* Shift Form (Add/Edit) */}
+            {isShiftFormOpen && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!shiftName.trim() || !shiftTimeSlot.trim()) return;
+
+                  if (editingShiftId) {
+                    handleEditShift({
+                      id: editingShiftId,
+                      name: shiftName,
+                      timeSlot: shiftTimeSlot
+                    });
+                  } else {
+                    handleAddShift({
+                      name: shiftName,
+                      timeSlot: shiftTimeSlot
+                    });
+                  }
+
+                  setIsShiftFormOpen(false);
+                  setEditingShiftId(null);
+                  setShiftName('');
+                  setShiftTimeSlot('');
+                }}
+                className="bg-indigo-50/30 p-4 rounded-lg border border-indigo-100/60 max-w-2xl space-y-3"
+              >
+                <div className="flex items-center justify-between border-b border-indigo-100/50 pb-1.5">
+                  <span className="text-xs font-bold text-indigo-800">
+                    {editingShiftId ? '📝 កែប្រែព័ត៌មានវេនយាម' : '✨ បន្ថែមវេនយាមថ្មី'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsShiftFormOpen(false);
+                      setEditingShiftId(null);
+                      setShiftName('');
+                      setShiftTimeSlot('');
+                    }}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">ឈ្មោះវេនយាម (ជាភាសាអង់គ្លេស ឬខ្មែរ)៖</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="ឧ. Morning Admission"
+                      value={shiftName}
+                      onChange={(e) => setShiftName(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded p-2 text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-hidden font-medium"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">ម៉ោងយាម (Time Slot)៖</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="ឧ. 06:45 AM - 07:30 AM"
+                      value={shiftTimeSlot}
+                      onChange={(e) => setShiftTimeSlot(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded p-2 text-xs text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-hidden font-medium"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1.5 border-t border-indigo-100/40">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsShiftFormOpen(false);
+                      setEditingShiftId(null);
+                      setShiftName('');
+                      setShiftTimeSlot('');
+                    }}
+                    className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-md transition-all font-medium border border-slate-200"
+                  >
+                    បោះបង់ (Cancel)
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-xs font-bold transition-all active:scale-95 cursor-pointer"
+                  >
+                    {editingShiftId ? 'រក្សាទុកការផ្លាស់ប្តូរ' : 'បន្ថែមវេនយាម'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Shifts Cards List Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {shifts.map((s) => {
+                const showKhName = s.name === 'Morning Admission' ? 'ម៉ោងចូលរៀនពេលព្រឹក'
+                  : s.name === 'Recess & Play' ? 'ម៉ោងចេញលេងខ្លី'
+                  : s.name === 'Lunch Break' ? 'ម៉ោងសម្រាកអាហារថ្ងៃត្រង់'
+                  : s.name === 'Afternoon Dismissal' ? 'ម៉ោងចេញពីសាលាពេលរសៀល'
+                  : s.name;
+
+                return (
+                  <div key={s.id} className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs hover:shadow-xs transition-all duration-200 flex flex-col justify-between group relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-indigo-500/80" />
+                    
+                    <div className="pt-1.5 space-y-1.5">
+                      <div className="flex items-start justify-between">
+                        <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                          {s.id}
+                        </span>
+                        
+                        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              setEditingShiftId(s.id);
+                              setShiftName(s.name);
+                              setShiftTimeSlot(s.timeSlot);
+                              setIsShiftFormOpen(true);
+                            }}
+                            className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-indigo-600 transition-all cursor-pointer"
+                            title="កែប្រែ (Edit)"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteShift(s.id)}
+                            className="p-1 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
+                            title="លុប (Delete)"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="font-bold text-xs text-slate-800 leading-snug">{showKhName}</p>
+                        {showKhName !== s.name && (
+                          <p className="text-[9px] text-slate-400 font-mono italic">{s.name}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-slate-600">
+                      <span className="text-[10px] text-slate-450 uppercase tracking-wide font-semibold">ពេលវេលា៖</span>
+                      <div className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 font-mono">
+                        <Clock className="w-3 h-3 text-indigo-500" />
+                        <span>{s.timeSlot}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1807,7 +2310,7 @@ export default function App() {
                             ) : (
                               <div className="space-y-2 pt-1">
                                 {personalEntries.map(entry => {
-                                  const shift = SHIFTS.find(s => s.id === entry.shiftId);
+                                  const shift = shifts.find(s => s.id === entry.shiftId);
                                   const zone = zones.find(z => z.id === entry.zoneId);
                                   if (!shift || !zone) return null;
                                   return (
@@ -1975,7 +2478,7 @@ export default function App() {
                     .map(r => {
                       const dayKh = r.day === 'Monday' ? 'ចន្ទ' : r.day === 'Tuesday' ? 'អង្គារ' : r.day === 'Wednesday' ? 'ពុធ' : r.day === 'Thursday' ? 'ព្រហسبតិ៍' : 'សុក្រ';
                       const zone = zones.find(z => z.id === r.zoneId);
-                      const shift = SHIFTS.find(s => s.id === r.shiftId);
+                      const shift = shifts.find(s => s.id === r.shiftId);
                       const staffNames = r.staffIds.map(id => staff.find(s => s.id === id)?.name || '').join(', ');
                       return (
                         <option key={r.id} value={r.id}>
@@ -2081,7 +2584,7 @@ export default function App() {
                     .map(r => {
                       const dayKh = r.day === 'Monday' ? 'ចន្ទ' : r.day === 'Tuesday' ? 'អង្គារ' : r.day === 'Wednesday' ? 'ពុធ' : r.day === 'Thursday' ? 'ព្រហស្បតិ៍' : 'សុក្រ';
                       const zone = zones.find(z => z.id === r.zoneId);
-                      const shift = SHIFTS.find(s => s.id === r.shiftId);
+                      const shift = shifts.find(s => s.id === r.shiftId);
                       const staffNames = r.staffIds.map(id => staff.find(s => s.id === id)?.name || '').join(', ');
                       return (
                         <option key={r.id} value={r.id}>
@@ -2215,7 +2718,7 @@ export default function App() {
                         .map(r => {
                           const dayKh = r.day === 'Monday' ? 'ចន្ទ' : r.day === 'Tuesday' ? 'អង្គារ' : r.day === 'Wednesday' ? 'ពុធ' : r.day === 'Thursday' ? 'ព្រហស្បតិ៍' : 'សុក្រ';
                           const zone = zones.find(z => z.id === r.zoneId);
-                          const shift = SHIFTS.find(s => s.id === r.shiftId);
+                          const shift = shifts.find(s => s.id === r.shiftId);
                           const staffNames = r.staffIds.map(id => staff.find(s => s.id === id)?.name || '').join(', ');
                           return (
                             <option key={r.id} value={r.id}>
@@ -2277,7 +2780,7 @@ export default function App() {
                       const toStaff = staff.find(s => s.id === swapToStaffId);
                       const entry = roster.find(r => r.id === swapRosterEntryId);
                       const zone = zones.find(z => z.id === entry?.zoneId);
-                      const shift = SHIFTS.find(s => s.id === entry?.shiftId);
+                      const shift = shifts.find(s => s.id === entry?.shiftId);
                       const dayKh = entry?.day === 'Monday' ? 'ចន្ទ' : entry?.day === 'Tuesday' ? 'អង្គារ' : entry?.day === 'Wednesday' ? 'ពុធ' : entry?.day === 'Thursday' ? 'ព្រហស្បតិ៍' : 'សុក្រ';
 
                       return (
@@ -2450,7 +2953,7 @@ export default function App() {
             <RosterBoard
               staff={staff}
               zones={zones}
-              shifts={SHIFTS}
+              shifts={shifts}
               roster={roster}
               onUpdateAssignment={handleUpdateAssignment}
               onClearRoster={handleClearRoster}
@@ -2496,12 +2999,16 @@ export default function App() {
             <StaffView
               staff={staff}
               zones={zones}
+              shifts={shifts}
               roster={roster}
               incidents={incidents}
               activeLoggedStaffId={activeLoggedStaffId}
               onActiveStaffChange={setActiveLoggedStaffId}
               onCheckIn={handleLiveCheckIn}
               onAddIncident={handleAddNewIncident}
+              targetLat={targetLat}
+              targetLon={targetLon}
+              onLogout={handleLogout}
             />
           </div>
         )}
@@ -2518,6 +3025,91 @@ export default function App() {
         )}
 
       </div>
+
+      {/* PASSCODE UNLOCK MODAL */}
+      {isPasscodeModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 max-w-md w-full p-6 space-y-5 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-indigo-600" />
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-indigo-700">
+                <Lock className="w-5 h-5 animate-bounce" />
+                <span className="font-bold text-sm uppercase tracking-wider font-display">ការផ្ទៀងផ្ទាត់សិទ្ធិ Admin</span>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsPasscodeModalOpen(false);
+                  setPendingPerspective(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto">
+                <Key className="w-6 h-6 animate-pulse" />
+              </div>
+              <h3 className="font-extrabold text-base text-slate-800">សូមបញ្ចូលលេខកូដសម្ងាត់</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                ផ្ទាំងគ្រប់គ្រងរដ្ឋបាល (Admin Control) និងប្រព័ន្ធវិភាគ (Analytics) ត្រូវបានចាក់សោ ដើម្បីការពារសន្តិសុខទិន្នន័យ។ បុគ្គលិកទូទៅមិនអាចចូលដំណើរការបានឡើយ។
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyPasscode} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                  លេខកូដសម្ងាត់ (ADMIN PASSCODE)៖
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoFocus
+                  placeholder="••••"
+                  value={passcodeInput}
+                  onChange={(e) => setPasscodeInput(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-center text-lg font-bold font-mono text-slate-800 tracking-widest focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:border-indigo-500 outline-hidden transition-all"
+                />
+                {passcodeError && (
+                  <p className="text-[11px] text-rose-500 font-bold text-center mt-1">
+                    ⚠️ {passcodeError}
+                  </p>
+                )}
+              </div>
+
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-2 text-amber-800 text-[11px]">
+                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-extrabold text-amber-900">ព័ត៌មានជំនួយសម្រាប់ការសាកល្បង៖</p>
+                  <p>លេខកូដសម្ងាត់ Admin លំនាំដើមគឺ៖ <span className="font-mono font-bold bg-amber-200 px-1.5 py-0.5 rounded text-amber-950">1234</span> ឬ <span className="font-mono font-bold bg-amber-200 px-1.5 py-0.5 rounded text-amber-950">admin</span></p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsPasscodeModalOpen(false);
+                    setPendingPerspective(null);
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition-all text-center cursor-pointer"
+                >
+                  បោះបង់ (Cancel)
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-all active:scale-95 text-center cursor-pointer"
+                >
+                  ផ្ទៀងផ្ទាត់ (Verify PIN)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

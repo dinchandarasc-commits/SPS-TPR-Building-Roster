@@ -30,6 +30,20 @@ export default function StaffSection({
   const [phone, setPhone] = useState('');
   const [maxDuties, setMaxDuties] = useState(4);
 
+  React.useEffect(() => {
+    if (role === 'Management') {
+      setMaxDuties(0);
+      setWorkingHours('មិនមានម៉ោងប្រចាំការ (Admin)');
+    } else {
+      if (maxDuties === 0) {
+        setMaxDuties(4);
+      }
+      if (workingHours === 'មិនមានម៉ោងប្រចាំការ (Admin)') {
+        setWorkingHours('07:30 - 15:30');
+      }
+    }
+  }, [role]);
+
   const filteredStaff = staff.filter((s) => {
     const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           s.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -286,12 +300,13 @@ export default function StaffSection({
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 font-display">ភារកិច្ចអតិបរមា / សប្តាហ៍</label>
                   <input
                     type="number"
-                    min="1"
+                    min={role === 'Management' ? "0" : "1"}
                     max="15"
                     required
+                    disabled={role === 'Management'}
                     value={maxDuties}
                     onChange={(e) => setMaxDuties(parseInt(e.target.value) || 4)}
-                    className="w-full px-3 py-2 text-sm rounded-md border border-slate-200 focus:outline-hidden focus:border-indigo-500"
+                    className="w-full px-3 py-2 text-sm rounded-md border border-slate-200 focus:outline-hidden focus:border-indigo-500 bg-slate-50 disabled:bg-slate-100 disabled:text-slate-500 font-bold"
                   />
                 </div>
               </div>
@@ -302,10 +317,16 @@ export default function StaffSection({
                   type="text"
                   required
                   placeholder="ឧទាហរណ៍៖ 07:30 - 16:30"
+                  disabled={role === 'Management'}
                   value={workingHours}
                   onChange={(e) => setWorkingHours(e.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-md border border-slate-200 focus:outline-hidden focus:border-indigo-500"
+                  className="w-full px-3 py-2 text-sm rounded-md border border-slate-200 focus:outline-hidden focus:border-indigo-500 bg-slate-50 disabled:bg-slate-100 disabled:text-slate-500 font-bold"
                 />
+                {role === 'Management' && (
+                  <p className="text-[10px] text-indigo-600 font-bold uppercase mt-1">
+                    ℹ️ គណៈគ្រប់គ្រង (Admin) មិនមានកាតព្វកិច្ចចុះម៉ោង និងវេនយាមល្បាតឡើយ។
+                  </p>
+                )}
               </div>
 
               <div>

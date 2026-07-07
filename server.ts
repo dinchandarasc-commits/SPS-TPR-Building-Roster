@@ -53,8 +53,8 @@ async function startServer() {
 
         STRICT SAFETY SCHEDULING CONSTRAINTS:
         1. "Security" staff MUST be prioritized for Zone D (School Entrances and Exits) such as the Main Front Gate or Rear Exit, especially during morning admission ('ម៉ោងចូលរៀនព្រឹក') and dismissal/going home times ('ម៉ោងទៅផ្ទះពេលព្រឹក' and 'ម៉ោងទៅផ្ទះពេលរសៀល').
-        2. "Teacher" and "Management" roles should be primarily allocated to Zone A (Common Areas like Playground, Cafeteria, Reading Corner) and Zone B (Corridors and Restroom Entrances from 1st to 5th Floor).
-        3. Restroom areas on higher floors (4th Floor, 5th Floor) are considered "High" risk and should be staffed during heavy student traffic shifts (such as the various 'ម៉ោងចេញលេង' shifts and 'ម៉ោងចូលវេន ថ្ងៃត្រង់').
+        2. "Teacher" roles should be primarily allocated to Zone A (Common Areas like Playground, Cafeteria, Reading Corner) and Zone B (Corridors and Restroom Entrances from 1st to 5th Floor).
+        3. "Management" staff (acting as Admins) MUST NEVER be assigned to any duty shifts or zones. They do not have duty shifts/hours.
         4. Staff should NOT be over-scheduled. Respect each staff member's "maxWeeklyDuties". Do not assign a staff member to multiple zones in the very same shift/day.
         5. For each zone, try to assign the minimum number of staff specified by "minStaffRequired".
 
@@ -274,6 +274,8 @@ function generateHeuristicRoster(staff: any[], zones: any[], shifts: any[]): any
           if (assignedStaff.length >= needed) break;
 
           const member = staff[i];
+          if (member.role === 'Management') continue; // Skip Management/Admin who do not have duty hours
+
           const currentCount = dutyCounts[member.id] || 0;
 
           // Constraints checklist:
@@ -297,6 +299,8 @@ function generateHeuristicRoster(staff: any[], zones: any[], shifts: any[]): any
             if (assignedStaff.length >= needed) break;
 
             const member = staff[i];
+            if (member.role === 'Management') continue; // Skip Management/Admin who do not have duty hours
+
             const currentCount = dutyCounts[member.id] || 0;
 
             if (currentCount < member.maxWeeklyDuties && !assignedInCurrentShift.has(member.id)) {
