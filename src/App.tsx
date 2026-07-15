@@ -8,9 +8,11 @@ import SafetyAuditPanel from './components/SafetyAuditPanel';
 import CampusMap from './components/CampusMap';
 import StaffView from './components/StaffView';
 import AnalyticsView from './components/AnalyticsView';
-import { Shield, Users, MapPin, Calendar, HelpCircle, CheckSquare, Sparkles, RefreshCw, AlertTriangle, Info, Sliders, ShieldCheck, Play, CheckCircle2, XCircle, ArrowRight, Search, MessageSquare, Bell, BellOff, Send, Check, ShieldAlert, User, QrCode, Clock, ArrowLeftRight, Camera, BarChart3, AlertOctagon, HelpCircle as HelpIcon, FileText, Plus, X, Edit, Trash2, Lock, Unlock, Key, Settings, Sun, Moon } from 'lucide-react';
+import { Shield, Users, MapPin, Calendar, HelpCircle, CheckSquare, Sparkles, RefreshCw, AlertTriangle, Info, Sliders, ShieldCheck, Play, CheckCircle2, XCircle, ArrowRight, Search, MessageSquare, Bell, BellOff, Send, Check, ShieldAlert, User, QrCode, Clock, ArrowLeftRight, Camera, BarChart3, AlertOctagon, HelpCircle as HelpIcon, FileText, Plus, X, Edit, Trash2, Lock, Unlock, Key, Settings, Sun, Moon, Menu } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { seedDatabaseIfEmpty, saveFullStaff, saveFullZones, saveFullRoster, saveFullIncidents, saveSettings, AppSettings, saveFullShifts } from './lib/db.ts';
 import LoginPortal from './components/LoginPortal';
+import schoolLogo from './ss.png';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'roster' | 'staff' | 'zones' | 'audit'>('roster');
@@ -61,6 +63,9 @@ export default function App() {
   const [maxWeeklyDutiesTeachers, setMaxWeeklyDutiesTeachers] = useState<number>(() => {
     const saved = localStorage.getItem('school_safety_max_duties_teachers');
     return saved ? parseInt(saved) : 5;
+  });
+  const [adminPin, setAdminPin] = useState<string>(() => {
+    return localStorage.getItem('school_safety_admin_pin') || '1234';
   });
 
   // UI state
@@ -118,6 +123,15 @@ export default function App() {
   const [shiftName, setShiftName] = useState<string>('');
   const [shiftTimeSlot, setShiftTimeSlot] = useState<string>('');
   const [isShiftFormOpen, setIsShiftFormOpen] = useState<boolean>(false);
+
+  // Admin PIN configuration form states
+  const [newPinInput, setNewPinInput] = useState<string>('');
+  const [newPinError, setNewPinError] = useState<string | null>(null);
+  const [pinChangeSuccess, setPinChangeSuccess] = useState<boolean>(false);
+  const [showModalPinHint, setShowModalPinHint] = useState<boolean>(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [pendingTab, setPendingTab] = useState<'roster' | 'staff' | 'zones' | 'audit' | null>(null);
+  const [staffViewAction, setStaffViewAction] = useState<'none' | 'scan_qr' | 'report_incident' | 'schedule' | 'recent_reports'>('none');
 
   // Selected Simulation Variables
   const [liveSelectedEntryId, setLiveSelectedEntryId] = useState<string>('');
@@ -273,7 +287,8 @@ export default function App() {
           liveCheckInLogs,
           escalationAlerts,
           targetLat,
-          targetLon
+          targetLon,
+          adminPin
         };
 
         const result = await seedDatabaseIfEmpty(
@@ -303,6 +318,9 @@ export default function App() {
         setNotificationSent(result.settings.notificationSent || false);
         setLiveCheckInLogs(result.settings.liveCheckInLogs || []);
         setEscalationAlerts(result.settings.escalationAlerts || []);
+        if (result.settings.adminPin !== undefined) {
+          setAdminPin(result.settings.adminPin);
+        }
         if (result.settings.targetLat !== undefined) {
           setTargetLat(result.settings.targetLat);
         }
@@ -590,12 +608,51 @@ export default function App() {
     }
   };
 
+  const handleSubItemClick = (perspective: 'admin' | 'staff' | 'analytics', subTabOrAction: string) => {
+    setIsDrawerOpen(false);
+    
+    if (perspective === 'staff') {
+      setCurrentPerspective('staff');
+      setStaffViewAction(subTabOrAction as any);
+      return;
+    }
+    
+    if (perspective === 'analytics') {
+      if (isAdminMode) {
+        setCurrentPerspective('analytics');
+      } else {
+        setPendingPerspective('analytics');
+        setPasscodeInput('');
+        setPasscodeError(null);
+        setIsPasscodeModalOpen(true);
+      }
+      return;
+    }
+    
+    // Admin perspective
+    if (isAdminMode) {
+      setCurrentPerspective('admin');
+      setActiveTab(subTabOrAction as any);
+    } else {
+      setPendingPerspective('admin');
+      setPendingTab(subTabOrAction as any);
+      setPasscodeInput('');
+      setPasscodeError(null);
+      setIsPasscodeModalOpen(true);
+    }
+  };
+
   const handleVerifyPasscode = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcodeInput === '1234' || passcodeInput.toLowerCase() === 'admin') {
+    const isCorrect = passcodeInput === adminPin || (adminPin === '1234' && passcodeInput.toLowerCase() === 'admin');
+    if (isCorrect) {
       setIsAdminMode(true);
       if (pendingPerspective) {
         setCurrentPerspective(pendingPerspective);
+      }
+      if (pendingTab) {
+        setActiveTab(pendingTab);
+        setPendingTab(null);
       }
       setIsPasscodeModalOpen(false);
       setPasscodeInput('');
@@ -603,6 +660,28 @@ export default function App() {
     } else {
       setPasscodeError('លេខកូដសម្ងាត់មិនត្រឹមត្រូវទេ! សូមព្យាយាមម្តងទៀត។ (PIN is incorrect)');
     }
+  };
+
+  const handleSaveAdminPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPinInput.trim()) {
+      setNewPinError('សូមបញ្ចូលលេខកូដសម្ងាត់ថ្មី!');
+      return;
+    }
+    if (newPinInput.trim().length < 4) {
+      setNewPinError('លេខកូដសម្ងាត់ត្រូវតែមានយ៉ាងតិច ៤ ខ្ទង់!');
+      return;
+    }
+    if (newPinInput.trim() === '1234') {
+      setNewPinError('សូមកុំប្រើប្រាស់លេខកូដចាស់ (1234) ដើម្បីធានាសុវត្ថិភាពខ្ពស់!');
+      return;
+    }
+    
+    setAdminPin(newPinInput.trim());
+    setNewPinError(null);
+    setPinChangeSuccess(true);
+    setNewPinInput('');
+    setTimeout(() => setPinChangeSuccess(false), 4000);
   };
 
   // Sync state to local storage and Firestore
@@ -662,7 +741,8 @@ export default function App() {
       liveCheckInLogs,
       escalationAlerts,
       targetLat,
-      targetLon
+      targetLon,
+      adminPin
     });
   }, [
     dbLoaded,
@@ -677,8 +757,13 @@ export default function App() {
     liveCheckInLogs,
     escalationAlerts,
     targetLat,
-    targetLon
+    targetLon,
+    adminPin
   ]);
+
+  useEffect(() => {
+    localStorage.setItem('school_safety_admin_pin', adminPin);
+  }, [adminPin]);
 
   // Propagate Rule engine changes to zones dynamically
   useEffect(() => {
@@ -1026,6 +1111,7 @@ export default function App() {
     return (
       <LoginPortal
         staff={staff}
+        adminPin={adminPin}
         onLoginSuccess={(staffId, adminMode) => {
           setActiveLoggedStaffId(staffId);
           setIsAdminMode(adminMode);
@@ -1044,10 +1130,10 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-800'} font-sans antialiased pb-12 transition-colors duration-200`}>
+    <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-800'} font-sans antialiased pb-12 transition-colors duration-200`}>
       {/* Top Warning Banner if Fallback or API issue */}
       {warning && (
-        <div className="bg-indigo-600 text-white py-2.5 px-6 text-xs font-semibold flex items-center justify-between shadow-md border-b border-indigo-700">
+        <div className="bg-indigo-600 text-white py-2.5 px-6 text-xs font-semibold flex items-center justify-between shadow-md border-b border-indigo-700 animate-fade-in">
           <div className="flex items-center gap-2 max-w-4xl">
             <Sparkles className="w-4 h-4 shrink-0 animate-pulse text-indigo-200" />
             <span>{warning}</span>
@@ -1059,20 +1145,43 @@ export default function App() {
       )}
 
       {/* Header Navigation from Geometric Balance design */}
-      <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shadow-sm z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-xl font-display shadow-sm">S</div>
+      <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 px-6 flex items-center justify-between shadow-xs sticky top-0 z-30 backdrop-blur-md transition-colors duration-200">
+        <div className="flex items-center gap-3.5">
+          {/* Hamburger Menu Button */}
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className={`p-2 -ml-2 rounded-xl active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5 focus:outline-hidden ${
+              isDarkMode
+                ? 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+                : 'text-slate-650 hover:text-slate-900 hover:bg-slate-100/80'
+            }`}
+            title="មឺនុយជ្រើសរើស (Navigation Menu)"
+            id="hamburger-menu-btn"
+          >
+            <Menu className="w-5.5 h-5.5" />
+          </button>
+
+          <img
+            src={schoolLogo}
+            alt="សាលារៀនសុវណ្ណភូមិ"
+            className="w-14 h-14 object-contain rounded-xl shadow-md border border-slate-200 dark:border-slate-800 hover:scale-105 transition-transform duration-250 shrink-0"
+            referrerPolicy="no-referrer"
+          />
           <div>
-            <h1 className="text-sm sm:text-base font-normal leading-tight text-slate-950 font-moul tracking-wide">ប្រព័ន្ធគ្រប់គ្រងកិច្ចប្រចាំការបុគ្គលិក សាលារៀនសុវណ្ណភូមិទួលពង្រ</h1>
-            <p className="text-[10px] sm:text-xs text-slate-500 font-medium tracking-wide uppercase mt-1">តារាងវេនប្រចាំការ និងបញ្ជាការសុវត្ថិភាពសិស្សានុសិស្ស</p>
+            <h1 className="text-xs sm:text-sm font-normal leading-tight text-slate-950 dark:text-slate-50 font-moul tracking-wide">ប្រព័ន្ធគ្រប់គ្រងកិច្ចប្រចាំការបុគ្គលិក សាលារៀនសុវណ្ណភូមិទួលពង្រ</h1>
+            <p className="text-[9px] sm:text-[10px] text-indigo-600/90 dark:text-indigo-400/90 font-bold tracking-widest uppercase mt-0.5 font-display flex items-center gap-1.5">
+              <span>Sovannaphumi School</span>
+              <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-750"></span>
+              <span className="text-slate-400 dark:text-slate-500 font-medium normal-case">តារាងវេនប្រចាំការ និងបញ្ជាការសុវត្ថិភាពសិស្សានុសិស្ស</span>
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-4 sm:gap-6">
-          <div className="hidden md:flex flex-col items-end">
-            <span className="text-xs font-semibold text-indigo-600">ការរៀបចំកាលវិភាគសកម្ម</span>
+          <div className="hidden lg:flex flex-col items-end">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-600">សកម្មភាពចម្បង</span>
             <span className="text-xs font-bold text-slate-500">ទិដ្ឋភាពទូទៅប្រចាំសប្តាហ៍</span>
           </div>
-          <div className="hidden md:block h-10 w-px bg-slate-200 mx-1"></div>
+          <div className="hidden lg:block h-10 w-px bg-slate-200 mx-1"></div>
           {/* Dark Mode Toggle for Nighttime Security Staff */}
           <button
             onClick={() => {
@@ -1139,81 +1248,429 @@ export default function App() {
         </div>
       </header>
 
-      {/* THREE PERSPECTIVES TAB SELECTOR BAR */}
-      <div className="bg-slate-900 border-b border-slate-950 px-6 py-3 flex flex-col md:flex-row items-center justify-between gap-4 shadow-md">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-indigo-400 animate-pulse" />
-            <span className="text-[10px] font-black text-indigo-300 uppercase tracking-widest font-mono">
-              របៀបបង្ហាញកម្មវិធី (PERSPECTIVE SWITCHER):
-            </span>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {isAdminMode ? (
-              <span className="bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 text-[9px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1">
-                <Unlock className="w-3 h-3" />
-                <span>សិទ្ធិ៖ អភិបាល (ADMIN MODE 🔓)</span>
-              </span>
-            ) : (
-              <span className="bg-slate-800 border border-slate-700 text-slate-350 text-[9px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1">
-                <Lock className="w-3 h-3 text-slate-400" />
-                <span>សិទ្ធិ៖ បុគ្គលិកទូទៅ (STAFF MODE 🔒)</span>
-              </span>
-            )}
+      {/* NAVIGATION DRAWER (Hamburger Menu) */}
+      <AnimatePresence>
+        {isDrawerOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDrawerOpen(false)}
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 cursor-pointer"
+            />
 
-            {isAdminMode && (
-              <button
-                onClick={() => {
-                  setIsAdminMode(false);
-                  setCurrentPerspective('staff');
-                }}
-                className="text-[9px] font-extrabold bg-rose-950/60 border border-rose-800/40 text-rose-300 hover:bg-rose-900/60 hover:text-white px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-0.5 animate-fadeIn"
-                title="ចាកចេញពី Admin (Lock perspective to Staff Mode)"
-              >
-                <Lock className="w-2.5 h-2.5" />
-                <span>ចាក់សោរវិញ (Lock Admin)</span>
-              </button>
+            {/* Drawer Body */}
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+              className="fixed inset-y-0 left-0 w-80 max-w-[90vw] bg-white dark:bg-slate-900 shadow-2xl z-50 flex flex-col h-full border-r border-slate-200 dark:border-slate-800 transition-colors duration-200"
+            >
+              {/* Drawer Header with Banner */}
+              <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-slate-850 dark:to-slate-800 relative">
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
+                  title="បិទ (Close)"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="flex items-center gap-3 mb-4">
+                  <img
+                    src={schoolLogo}
+                    alt="សាលារៀនសុវណ្ណភូមិ"
+                    className="w-12 h-12 object-contain rounded-lg shadow-md shrink-0 border border-slate-200 dark:border-slate-800"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div>
+                    <h2 className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest font-display">
+                      Sovannaphumi
+                    </h2>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">
+                      សាលារៀនសុវណ្ណភូមិ ទួលពង្រ
+                    </p>
+                  </div>
+                </div>
+
+                {/* Profile Card inside Drawer */}
+                {(() => {
+                  const activeStaff = staff.find(s => s.id === activeLoggedStaffId);
+                  const staffName = activeStaff?.name || 'គណនីសាកល្បង';
+                  const staffRole = activeStaff?.role;
+                  const initials = staffName.split(' ').pop()?.substring(0, 2) || 'ST';
+                  
+                  return (
+                    <div className="flex items-center gap-3 bg-white dark:bg-slate-850 border border-slate-150 dark:border-slate-755 rounded-xl p-3 shadow-2xs">
+                      <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-xs shrink-0 ${
+                        staffRole === 'Management'
+                          ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/30 dark:border-rose-900/40 dark:text-rose-350'
+                          : staffRole === 'Security'
+                          ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/30 dark:border-amber-900/40 dark:text-amber-350'
+                          : 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-900/40 dark:text-emerald-350'
+                      }`}>
+                        {initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-black text-slate-800 dark:text-slate-100 truncate font-display">
+                          {staffName}
+                        </p>
+                        <p className="text-[9px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider truncate mt-0.5">
+                          {staffRole === 'Management'
+                            ? '💼 គណៈគ្រប់គ្រង (Admin)'
+                            : staffRole === 'Security'
+                            ? '👮 សន្តិសុខ (Staff)'
+                            : '🧑‍🏫 គ្រូបង្រៀន (Staff)'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Drawer Navigation Links */}
+              <div className="flex-1 overflow-y-auto py-5 px-4 space-y-5">
+                {/* CATEGORY 1: Staff Perspective */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                    <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                      ទិដ្ឋភាពបុគ្គលិក (Staff Operations)
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    {/* Item 1.1: QR Scanner */}
+                    <button
+                      onClick={() => handleSubItemClick('staff', 'scan_qr')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left cursor-pointer ${
+                        currentPerspective === 'staff' && staffViewAction === 'scan_qr'
+                          ? 'bg-indigo-600/10 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-500/20 shadow-xs'
+                          : 'text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-950 dark:hover:text-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <QrCode className="w-4 h-4 shrink-0 animate-pulse text-indigo-500" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold leading-none">ស្កែន QR Check-In</p>
+                        <p className="text-[9px] text-slate-455 dark:text-slate-500 mt-1 truncate">បញ្ជាក់វត្តមានចុះយាមល្បាត</p>
+                      </div>
+                    </button>
+
+                    {/* Item 1.2: Emergency Report */}
+                    <button
+                      onClick={() => handleSubItemClick('staff', 'report_incident')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left cursor-pointer ${
+                        currentPerspective === 'staff' && staffViewAction === 'report_incident'
+                          ? 'bg-indigo-600/10 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-500/20 shadow-xs'
+                          : 'text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-950 dark:hover:text-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <AlertOctagon className="w-4 h-4 shrink-0 text-rose-500 dark:text-rose-455 animate-bounce" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold leading-none text-rose-650 dark:text-rose-400">រាយការណ៍អាសន្ន</p>
+                        <p className="text-[9px] text-slate-455 dark:text-slate-500 mt-1 truncate">រាយការណ៍ឧបទ្ទវហេតុបន្ទាន់</p>
+                      </div>
+                    </button>
+
+                    {/* Item 1.3: Assigned Duty Schedule */}
+                    <button
+                      onClick={() => handleSubItemClick('staff', 'schedule')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left cursor-pointer ${
+                        currentPerspective === 'staff' && staffViewAction === 'schedule'
+                          ? 'bg-indigo-600/10 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-500/20 shadow-xs'
+                          : 'text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-950 dark:hover:text-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <Clock className="w-4 h-4 shrink-0 text-amber-500" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold leading-none">កាលវិភាគយាមរបស់ខ្ញុំ</p>
+                        <p className="text-[9px] text-slate-455 dark:text-slate-500 mt-1 truncate">តារាងភារកិច្ចផ្ទាល់ខ្លួន</p>
+                      </div>
+                    </button>
+
+                    {/* Item 1.4: Recent reports */}
+                    <button
+                      onClick={() => handleSubItemClick('staff', 'recent_reports')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left cursor-pointer ${
+                        currentPerspective === 'staff' && staffViewAction === 'recent_reports'
+                          ? 'bg-indigo-600/10 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-500/20 shadow-xs'
+                          : 'text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-950 dark:hover:text-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <FileText className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold leading-none">របាយការណ៍របស់ខ្ញុំ</p>
+                        <p className="text-[9px] text-slate-455 dark:text-slate-500 mt-1 truncate">ប្រវត្តិនៃការរាយការណ៍</p>
+                      </div>
+                    </button>
+
+                  </div>
+                </div>
+
+                {/* CATEGORY 2: Admin perspective */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                    <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                      <span>ផ្នែកគ្រប់គ្រងអភិបាល (Admin Control)</span>
+                      {!isAdminMode && <span className="text-[10px]">🔒</span>}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    {/* Item 2.1: Master Duty Roster */}
+                    <button
+                      onClick={() => handleSubItemClick('admin', 'roster')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left cursor-pointer ${
+                        currentPerspective === 'admin' && activeTab === 'roster'
+                          ? 'bg-indigo-600/10 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-500/20 shadow-xs'
+                          : 'text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-950 dark:hover:text-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4 shrink-0 text-indigo-500" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold leading-none">តារាងកាលវិភាគរួម</p>
+                        <p className="text-[9px] text-slate-455 mt-1 truncate">រៀបចំវេនប្រចាំការគ្រូ & សន្តិសុខ</p>
+                      </div>
+                    </button>
+
+                    {/* Item 2.2: Staff Profiles */}
+                    <button
+                      onClick={() => handleSubItemClick('admin', 'staff')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left cursor-pointer ${
+                        currentPerspective === 'admin' && activeTab === 'staff'
+                          ? 'bg-indigo-600/10 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-500/20 shadow-xs'
+                          : 'text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-950 dark:hover:text-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <Users className="w-4 h-4 shrink-0 text-blue-500" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold leading-none">គ្រប់គ្រងបុគ្គលិក</p>
+                        <p className="text-[9px] text-slate-455 mt-1 truncate">បញ្ជីឈ្មោះគណនីគ្រូ & សន្តិសុខ</p>
+                      </div>
+                    </button>
+
+                    {/* Item 2.3: Duty Zones */}
+                    <button
+                      onClick={() => handleSubItemClick('admin', 'zones')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left cursor-pointer ${
+                        currentPerspective === 'admin' && activeTab === 'zones'
+                          ? 'bg-indigo-600/10 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-500/20 shadow-xs'
+                          : 'text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-950 dark:hover:text-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <MapPin className="w-4 h-4 shrink-0 text-teal-500" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold leading-none">តំបន់ប្រចាំការសាលា</p>
+                        <p className="text-[9px] text-slate-455 mt-1 truncate">កំណត់ និងគ្រប់គ្រងគោលដៅល្បាត</p>
+                      </div>
+                    </button>
+
+                    {/* Item 2.4: Safety Audit */}
+                    <button
+                      onClick={() => handleSubItemClick('admin', 'audit')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left cursor-pointer ${
+                        currentPerspective === 'admin' && activeTab === 'audit'
+                          ? 'bg-indigo-600/10 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-500/20 shadow-xs'
+                          : 'text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-950 dark:hover:text-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-500" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold leading-none">សវនកម្មសុវត្ថិភាពសាលា</p>
+                        <p className="text-[9px] text-slate-455 mt-1 truncate">ការត្រួតពិនិត្យច្បាប់ស្វ័យប្រវត្ត</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* CATEGORY 3: Analytics Report */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 px-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                    <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                      <span>របាយការណ៍ & ស្ថិតិ (Analytics)</span>
+                      {!isAdminMode && <span className="text-[10px]">🔒</span>}
+                    </p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => handleSubItemClick('analytics', '')}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left cursor-pointer ${
+                        currentPerspective === 'analytics'
+                          ? 'bg-indigo-600/10 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-500/20 shadow-xs'
+                          : 'text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-950 dark:hover:text-slate-50 border border-transparent'
+                      }`}
+                    >
+                      <BarChart3 className="w-4 h-4 shrink-0 text-indigo-500" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold leading-none">ស្ថិតិវត្តមាន & ហេតុការណ៍</p>
+                        <p className="text-[9px] text-slate-455 mt-1 truncate">តារាងស្ថិតិវត្តមាន និងរបាយការណ៍</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+
+                {/* Perspective Status Card */}
+                <div className="bg-slate-50 dark:bg-slate-850 border border-slate-150 dark:border-slate-750/70 rounded-2xl p-4 space-y-3">
+                  <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    ស្ថានភាពសិទ្ធិ (Privilege Status)
+                  </p>
+                  
+                  <div className="flex items-center gap-2">
+                    {isAdminMode ? (
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 w-full justify-center">
+                        <Unlock className="w-3.5 h-3.5" />
+                        <span>អភិបាល (ADMIN MODE 🔓)</span>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1.5 w-full justify-center">
+                        <Lock className="w-3.5 h-3.5 text-slate-450" />
+                        <span>បុគ្គលិកទូទៅ (STAFF MODE 🔒)</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {isAdminMode ? (
+                    <button
+                      onClick={() => {
+                        setIsAdminMode(false);
+                        setCurrentPerspective('staff');
+                        setIsDrawerOpen(false);
+                      }}
+                      className="w-full text-[10px] font-black bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <Lock className="w-3 h-3" />
+                      <span>ចាក់សោរវិញ (Lock Admin)</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        handlePerspectiveClick('admin');
+                        setIsDrawerOpen(false);
+                      }}
+                      className="w-full text-[10px] font-black bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/50 text-indigo-700 dark:text-indigo-400 py-2 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <Unlock className="w-3 h-3" />
+                      <span>ចូលគណនី Admin</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Drawer Footer controls */}
+              <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/50 space-y-3">
+                {/* Night mode toggle */}
+                <button
+                  onClick={() => {
+                    setIsDarkMode(prev => {
+                      const next = !prev;
+                      localStorage.setItem('school_safety_dark_mode', next ? 'true' : 'false');
+                      return next;
+                    });
+                  }}
+                  className={`w-full py-2.5 px-3 rounded-xl border transition-all duration-250 cursor-pointer flex items-center justify-between focus:outline-hidden ${
+                    isDarkMode
+                      ? 'bg-slate-950 border-slate-800 text-amber-400 hover:bg-slate-900 hover:text-amber-300'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    {isDarkMode ? (
+                      <>
+                        <Sun className="w-4 h-4 text-amber-400" />
+                        <span className="text-[10px] font-black uppercase">របៀបពេលថ្ងៃ (Light Mode)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="w-4 h-4 text-indigo-600" />
+                        <span className="text-[10px] font-black uppercase">របៀបពេលយប់ (Night Mode)</span>
+                      </>
+                    )}
+                  </div>
+                  <span className="text-[9px] opacity-60 font-bold">ចុចប្តូរ</span>
+                </button>
+
+                {/* Logout Button */}
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    setIsDrawerOpen(false);
+                  }}
+                  className="w-full bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50 text-rose-700 dark:text-rose-400 text-[10px] font-black uppercase py-2.5 rounded-xl border border-rose-200 dark:border-rose-900/40 transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <XCircle className="w-4 h-4" />
+                  <span>ចាកចេញពីគណនី (Log Out)</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* PERSPECTIVE BREADCRUMB BAR */}
+      <div className="bg-slate-900 border-b border-slate-950 px-6 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1.5 bg-indigo-950/60 border border-indigo-900/40 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+          >
+            <Menu className="w-3.5 h-3.5" />
+            <span>មឺនុយជ្រើសរើស (Menu)</span>
+          </button>
+          <span className="text-slate-700 font-black">/</span>
+          <span className="text-slate-300 font-bold uppercase tracking-widest text-[10px] flex items-center gap-1.5">
+            {currentPerspective === 'admin' ? (
+              <>
+                <Sliders className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Admin Control Dashboard</span>
+              </>
+            ) : currentPerspective === 'staff' ? (
+              <>
+                <QrCode className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Staff View & Check-In</span>
+              </>
+            ) : (
+              <>
+                <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Analytics Reports</span>
+              </>
             )}
-          </div>
+          </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 w-full md:w-auto shrink-0">
-          <button
-            onClick={() => handlePerspectiveClick('admin')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 ${
-              currentPerspective === 'admin'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-750'
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>Admin Control {!isAdminMode && '🔒'}</span>
-          </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          {isAdminMode ? (
+            <div className="bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 text-[9px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1">
+              <Unlock className="w-3 h-3" />
+              <span>សិទ្ធិ៖ អភិបាល (ADMIN MODE 🔓)</span>
+            </div>
+          ) : (
+            <div className="bg-slate-850 border border-slate-750 text-slate-400 text-[9px] font-extrabold px-2.5 py-1 rounded-full flex items-center gap-1">
+              <Lock className="w-3 h-3 text-slate-550" />
+              <span>សិទ្ធិ៖ បុគ្គលិកទូទៅ (STAFF MODE 🔒)</span>
+            </div>
+          )}
 
-          <button
-            onClick={() => handlePerspectiveClick('staff')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 ${
-              currentPerspective === 'staff'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-750'
-            }`}
-          >
-            <QrCode className="w-3.5 h-3.5" />
-            <span>Staff View</span>
-          </button>
-
-          <button
-            onClick={() => handlePerspectiveClick('analytics')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 ${
-              currentPerspective === 'analytics'
-                ? 'bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-750'
-            }`}
-          >
-            <BarChart3 className="w-3.5 h-3.5" />
-            <span>Analytics {!isAdminMode && '🔒'}</span>
-          </button>
+          {isAdminMode && (
+            <button
+              onClick={() => {
+                setIsAdminMode(false);
+                setCurrentPerspective('staff');
+              }}
+              className="text-[9px] font-extrabold bg-rose-950/60 border border-rose-800/40 text-rose-300 hover:bg-rose-900/60 hover:text-white px-2 py-1 rounded-md transition-all cursor-pointer flex items-center gap-0.5"
+              title="ចាកចេញពី Admin (Lock perspective to Staff Mode)"
+            >
+              <Lock className="w-2.5 h-2.5" />
+              <span>ចាក់សោរវិញ (Lock Admin)</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1644,6 +2101,70 @@ export default function App() {
                     <strong>ចំណាំ៖</strong> ទីតាំងលំនាំដើមរបស់សាលាគឺ <strong>Phnom Penh 11.5564, 104.9282</strong>។ ប្រសិនបើលោកអ្នកស្ថិតនៅក្រៅបរិវេណនេះ ការធ្វើតេស្តស្កែន (Check-In) អាចនឹងត្រូវបានបដិសេធដោយ Geofencing Block ប្រសិនបើប្រើប្រាស់ទីតាំងពិត។
                   </p>
                 </div>
+              </div>
+
+              {/* កែប្រែលេខកូដសម្ងាត់គណៈគ្រប់គ្រង (Admin Passcode Management) */}
+              <div className="bg-slate-50/60 p-4 rounded-xl border border-slate-200/80 space-y-3 mt-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 p-1 bg-rose-50 text-rose-700 rounded-lg border border-rose-100">
+                    <Shield className="w-4 h-4 text-rose-700" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-xs text-slate-800">លេខកូដសម្ងាត់គណៈគ្រប់គ្រង (Admin Security Passcode)</p>
+                      {adminPin === '1234' ? (
+                        <span className="text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 animate-pulse">
+                          ⚠️ មិនទាន់ប្តូរ
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
+                          🛡️ សុវត្ថិភាពខ្ពស់
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      ផ្លាស់ប្តូរលេខកូដសម្ងាត់ (PIN) សម្រាប់ចូលគណនី Admin ឬកែប្រែការកំណត់ប្រព័ន្ធ។ លេខកូដនេះនឹងត្រូវបានរក្សាទុកក្នុងប្រព័ន្ធ Cloud Firestore ដោយស្វ័យប្រវត្តិ។
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveAdminPin} className="space-y-3 bg-white p-3.5 rounded-lg border border-slate-150">
+                  <div className="flex flex-col sm:flex-row gap-3 items-end">
+                    <div className="flex-1 space-y-1">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase">លេខកូដសម្ងាត់ថ្មី (៤-៨ ខ្ទង់)៖</label>
+                      <input
+                        type="text"
+                        maxLength={8}
+                        placeholder="ឧ. ៨៨៨៨"
+                        value={newPinInput}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, ''); // Numbers only
+                          setNewPinInput(val);
+                          setNewPinError(null);
+                        }}
+                        className="w-full text-xs font-mono font-bold bg-slate-50 border border-slate-250 p-2 rounded-md text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-rose-500 focus:bg-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full sm:w-auto px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 active:scale-95 transition-all rounded-md cursor-pointer shrink-0"
+                    >
+                      ផ្លាស់ប្តូរលេខកូដ (Change PIN)
+                    </button>
+                  </div>
+
+                  {newPinError && (
+                    <p className="text-[10px] text-rose-500 font-bold flex items-center gap-1">
+                      ⚠️ {newPinError}
+                    </p>
+                  )}
+
+                  {pinChangeSuccess && (
+                    <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 bg-emerald-50 border border-emerald-100 p-1.5 rounded-md">
+                      ✅ លេខកូដសម្ងាត់ Admin ត្រូវបានផ្លាស់ប្តូរ និងរក្សាទុកក្នុង Cloud ដោយជោគជ័យ!
+                    </p>
+                  )}
+                </form>
               </div>
             </div>
           </div>
@@ -2317,9 +2838,12 @@ export default function App() {
                         {/* Custom App notification Header bar */}
                         <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-3 mt-1 px-1">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 bg-indigo-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-                              <Shield className="w-3.5 h-3.5 animate-pulse" />
-                            </div>
+                            <img
+                              src={schoolLogo}
+                              alt="សាលារៀនសុវណ្ណភូមិ"
+                              className="w-10 h-10 object-contain rounded-md border border-slate-200"
+                              referrerPolicy="no-referrer"
+                            />
                             <div>
                               <p className="font-extrabold text-[11px] leading-none text-slate-900">សាលារៀន សុវណ្ណភូមិ</p>
                               <span className="text-[9px] text-emerald-600 font-bold flex items-center gap-1">
@@ -3053,6 +3577,8 @@ export default function App() {
               targetLat={targetLat}
               targetLon={targetLon}
               onLogout={handleLogout}
+              staffViewAction={staffViewAction}
+              setStaffViewAction={setStaffViewAction}
             />
           </div>
         )}
@@ -3123,12 +3649,8 @@ export default function App() {
                 )}
               </div>
 
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-2 text-amber-800 text-[11px]">
-                <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <div className="space-y-0.5">
-                  <p className="font-extrabold text-amber-900">ព័ត៌មានជំនួយសម្រាប់ការសាកល្បង៖</p>
-                  <p>លេខកូដសម្ងាត់ Admin លំនាំដើមគឺ៖ <span className="font-mono font-bold bg-amber-200 px-1.5 py-0.5 rounded text-amber-950">1234</span> ឬ <span className="font-mono font-bold bg-amber-200 px-1.5 py-0.5 rounded text-amber-950">admin</span></p>
-                </div>
+              <div className="bg-slate-50 border border-slate-150 p-2.5 rounded-xl text-[10px] text-slate-500 text-center font-medium">
+                🔐 ផ្នែកនេះត្រូវបានការពារដោយប្រព័ន្ធសុវត្ថិភាព។ លេខកូដសម្ងាត់គណៈគ្រប់គ្រង (Admin Passcode) គឺចាំបាច់ដើម្បីបន្ត។
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2">
@@ -3137,6 +3659,7 @@ export default function App() {
                   onClick={() => {
                     setIsPasscodeModalOpen(false);
                     setPendingPerspective(null);
+                    setShowModalPinHint(false);
                   }}
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl border border-slate-200 transition-all text-center cursor-pointer"
                 >

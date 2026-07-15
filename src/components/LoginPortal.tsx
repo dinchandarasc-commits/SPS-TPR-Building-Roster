@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { StaffProfile } from '../types';
 import { Lock, Unlock, Users, Shield, Key, Eye, EyeOff, AlertTriangle, HelpCircle } from 'lucide-react';
+import schoolLogo from '../ss.png';
 
 interface LoginPortalProps {
   staff: StaffProfile[];
   onLoginSuccess: (staffId: string, isAdminMode: boolean) => void;
+  adminPin?: string;
 }
 
-export default function LoginPortal({ staff, onLoginSuccess }: LoginPortalProps) {
+export default function LoginPortal({ staff, onLoginSuccess, adminPin = '1234' }: LoginPortalProps) {
   const [selectedStaff, setSelectedStaff] = useState<StaffProfile | null>(null);
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [showPin, setShowPin] = useState<boolean>(false);
+  const [showDemoPinHint, setShowDemoPinHint] = useState<boolean>(false);
 
   // Filter staff into Management (Admin) and general staff
   const adminStaff = staff.filter(s => s.role === 'Management');
@@ -30,12 +33,13 @@ export default function LoginPortal({ staff, onLoginSuccess }: LoginPortalProps)
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput === '1234' || pinInput.toLowerCase() === 'admin') {
+    const isCorrect = pinInput === adminPin || (adminPin === '1234' && pinInput.toLowerCase() === 'admin');
+    if (isCorrect) {
       if (selectedStaff) {
         onLoginSuccess(selectedStaff.id, true);
       }
     } else {
-      setPinError('លេខកូដសម្ងាត់មិនត្រឹមត្រូវទេ! (Default is 1234)');
+      setPinError('លេខកូដសម្ងាត់មិនត្រឹមត្រូវទេ! សូមព្យាយាមម្តងទៀត។');
     }
   };
 
@@ -49,9 +53,12 @@ export default function LoginPortal({ staff, onLoginSuccess }: LoginPortalProps)
         
         {/* App Title Header */}
         <div className="text-center space-y-3">
-          <div className="inline-flex w-16 h-16 bg-indigo-600 rounded-2xl items-center justify-center text-white font-bold text-3xl shadow-xl shadow-indigo-600/20 border border-indigo-400/20 mb-2">
-            <Shield className="w-8 h-8 animate-pulse text-indigo-100" />
-          </div>
+          <img
+            src={schoolLogo}
+            alt="សាលារៀនសុវណ្ណភូមិ"
+            className="inline-flex w-24 h-24 object-contain rounded-2xl shadow-xl shadow-indigo-650/15 border border-slate-700/50 mb-2 hover:scale-105 transition-transform duration-250"
+            referrerPolicy="no-referrer"
+          />
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-wide font-display uppercase">
             ប្រព័ន្ធគ្រប់គ្រងវត្តមាន និងកាលវិភាគល្បាត
           </h1>
@@ -148,9 +155,9 @@ export default function LoginPortal({ staff, onLoginSuccess }: LoginPortalProps)
             <div className="bg-indigo-950/40 border border-indigo-900/60 rounded-2xl p-4 flex items-start gap-3">
               <HelpCircle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-bold text-xs text-indigo-300">ព័ត៌មានជំនួយសម្រាប់ការសាកល្បង៖</p>
+                <p className="font-bold text-xs text-indigo-300">ការផ្ទៀងផ្ទាត់សិទ្ធិចូលប្រើប្រាស់ (Role-Based Access Control)៖</p>
                 <p className="text-[11px] text-slate-400 leading-relaxed">
-                  ដើម្បីសាកល្បងសិទ្ធិជា <span className="font-bold text-indigo-300">Admin</span> សូមចុចយកគណនីក្នុងក្រុមទី ១ រួចបញ្ចូលលេខកូដសម្ងាត់ <span className="font-mono font-bold bg-indigo-900 text-indigo-200 px-1.5 py-0.5 rounded">1234</span> ឬ <span className="font-mono font-bold bg-indigo-900 text-indigo-200 px-1.5 py-0.5 rounded">admin</span>។ គណនីក្នុងក្រុមទី ២ អាចចុចចូលដោយសេរីដោយពុំបាច់វាយលេខកូដឡើយ។
+                  គណនីក្នុងក្រុមទី ១ (គណៈគ្រប់គ្រង) តម្រូវឱ្យវាយបញ្ចូលលេខកូដសម្ងាត់ (PIN) ដើម្បីចូលទៅកាន់ផ្ទាំងគ្រប់គ្រង Admin។ ចំណែកឯក្រុមទី ២ (លោកគ្រូ/អ្នកគ្រូ និងភ្នាក់ងារ) អាចចុចចូលដោយផ្ទាល់ដើម្បីស្កែនវត្តមាន ឬមើលកាលវិភាគការងាររបស់ខ្លួន។
                 </p>
               </div>
             </div>
@@ -205,8 +212,8 @@ export default function LoginPortal({ staff, onLoginSuccess }: LoginPortalProps)
                 )}
               </div>
 
-              <div className="bg-slate-800/50 border border-slate-750 p-3 rounded-xl text-[10px] text-slate-400 text-center">
-                លេខកូដសម្ងាត់ Admin លំនាំដើមគឺ៖ <span className="font-mono font-bold bg-slate-700 px-1.5 py-0.5 rounded text-white">1234</span>
+              <div className="bg-slate-800/40 border border-slate-750 p-3 rounded-xl text-[10px] text-slate-400 text-center">
+                🔐 ផ្នែកនេះត្រូវបានការពារដោយប្រព័ន្ធសុវត្ថិភាព។ លេខកូដសម្ងាត់គណៈគ្រប់គ្រង (Admin Passcode) គឺចាំបាច់ដើម្បីបន្ត។
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-2">

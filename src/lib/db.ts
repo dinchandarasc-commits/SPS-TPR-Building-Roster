@@ -244,6 +244,7 @@ export interface AppSettings {
   escalationAlerts: any[];
   targetLat?: number;
   targetLon?: number;
+  adminPin?: string;
 }
 
 // Load global configuration settings

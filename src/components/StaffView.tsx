@@ -16,6 +16,8 @@ interface StaffViewProps {
   targetLat?: number;
   targetLon?: number;
   onLogout?: () => void;
+  staffViewAction?: 'none' | 'scan_qr' | 'report_incident' | 'schedule' | 'recent_reports';
+  setStaffViewAction?: (action: 'none' | 'scan_qr' | 'report_incident' | 'schedule' | 'recent_reports') => void;
 }
 
 export default function StaffView({
@@ -30,7 +32,9 @@ export default function StaffView({
   onAddIncident,
   targetLat: targetLatProp = 11.556400,
   targetLon: targetLonProp = 104.928200,
-  onLogout
+  onLogout,
+  staffViewAction = 'none',
+  setStaffViewAction
 }: StaffViewProps) {
   // Local States
   const [isScanningQR, setIsScanningQR] = useState(false);
@@ -55,6 +59,34 @@ export default function StaffView({
   useEffect(() => {
     setTargetLon(targetLonProp);
   }, [targetLonProp]);
+
+  useEffect(() => {
+    if (staffViewAction === 'scan_qr') {
+      setIsScanningQR(true);
+      setActiveReportDrawer(false);
+      setTimeout(() => {
+        document.getElementById('btn-scan-qr-duty')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      setStaffViewAction?.('none');
+    } else if (staffViewAction === 'report_incident') {
+      setActiveReportDrawer(true);
+      setIsScanningQR(false);
+      setTimeout(() => {
+        document.getElementById('btn-report-emergency-incident')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      setStaffViewAction?.('none');
+    } else if (staffViewAction === 'schedule') {
+      setTimeout(() => {
+        document.getElementById('assigned-duty-schedule-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      setStaffViewAction?.('none');
+    } else if (staffViewAction === 'recent_reports') {
+      setTimeout(() => {
+        document.getElementById('recent-safety-reports-section')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      setStaffViewAction?.('none');
+    }
+  }, [staffViewAction, setStaffViewAction]);
 
   const [userLat, setUserLat] = useState(11.556410); // Simulated near Lat
   const [userLon, setUserLon] = useState(104.928210); // Simulated near Lon
@@ -844,7 +876,7 @@ export default function StaffView({
       )}
 
       {/* Your Assigned Roster Schedule Card */}
-      <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-4">
+      <div id="assigned-duty-schedule-section" className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
           <Clock className="w-5 h-5 text-indigo-600" />
           <h3 className="font-extrabold text-sm text-slate-800 font-display uppercase tracking-wide">
@@ -921,7 +953,7 @@ export default function StaffView({
       </div>
 
       {/* Your Recent Safety Reports Panel */}
-      <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-4">
+      <div id="recent-safety-reports-section" className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
           <FileText className="w-5 h-5 text-rose-600" />
           <h3 className="font-extrabold text-sm text-slate-800 font-display uppercase tracking-wide">

@@ -46,17 +46,17 @@
    Premium High-Contrast Dark Mode Overrides for Nighttime Security Staff
    ========================================================================== */
 .dark {
-  background-color: #030712 !important; /* gray-950 */
+  background-color: #060913 !important; /* Extremely high-end Obsidian Blue-Gray */
   color: #f3f4f6 !important; /* gray-100 */
 }
 
-/* Base Card & Layout Overrides */
+/* Base Card & Layout Overrides for Premium Styling */
 .dark header,
 .dark .bg-white,
 .dark [class*="bg-white"] {
-  background-color: #111827 !important; /* gray-900 */
+  background-color: #0c1122 !important; /* Soft deep obsidian */
   color: #f3f4f6 !important;
-  border-color: #374151 !important; /* gray-700 */
+  border-color: #1f293d !important; /* Thin crisp cyber-border */
 }
 
 /* Sidebar & Secondary Layout Overrides */
@@ -67,8 +67,8 @@
 .dark .bg-slate-250,
 .dark .bg-gray-50,
 .dark .bg-gray-100 {
-  background-color: #0b0f19 !important; /* deep rich space-dark background */
-  border-color: #1f2937 !important; /* gray-800 */
+  background-color: #070a14 !important; /* Jet obsidian */
+  border-color: #161f33 !important;
 }
 
 /* Text Contrast Improvements */
@@ -80,15 +80,16 @@
 .dark .text-gray-900,
 .dark .text-gray-800,
 .dark .text-slate-900\/90 {
-  color: #f9fafb !important; /* bright white-gray for clear night legibility */
+  color: #f9fafb !important; /* Bright silver-white */
 }
 
 .dark .text-slate-600,
 .dark .text-slate-500,
 .dark .text-slate-400,
+.dark .text-gray-650,
 .dark .text-gray-600,
 .dark .text-gray-500 {
-  color: #9ca3af !important; /* high-contrast muted gray */
+  color: #9cb2cd !important; /* Ice blue-gray for clear night legibility */
 }
 
 /* Border Overrides */
@@ -99,7 +100,7 @@
 .dark .border-gray-200,
 .dark .border-gray-100,
 .dark .border-gray-300 {
-  border-color: #374151 !important; /* clear but soft border */
+  border-color: #1e293b !important; /* Clean modern steel lines */
 }
 
 /* Inputs, Textareas, Selects */
@@ -107,9 +108,9 @@
 .dark select,
 .dark textarea,
 .dark select option {
-  background-color: #030712 !important;
+  background-color: #0a0e1a !important;
   color: #f9fafb !important;
-  border-color: #4b5563 !important;
+  border-color: #2a3b5c !important;
 }
 
 .dark input:focus,
@@ -117,30 +118,32 @@
 .dark textarea:focus {
   border-color: #6366f1 !important;
   outline: none;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 }
 
 .dark input::placeholder,
 .dark textarea::placeholder {
-  color: #6b7280 !important;
+  color: #4b6180 !important;
 }
 
 /* Table Hover States */
 .dark tr:hover {
-  background-color: #1f2937 !important;
+  background-color: #0f172a !important;
 }
 
 .dark td,
 .dark th {
-  border-color: #374151 !important;
+  border-color: #1e293b !important;
 }
 
 /* Overrides for specific elements we want to keep bright and readable but custom */
+.dark .shadow-2xs,
+.dark .shadow-xs,
 .dark .shadow-sm,
 .dark .shadow-md,
 .dark .shadow-lg,
 .dark .shadow-xl {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.7), 0 2px 8px -1px rgba(0, 0, 0, 0.4) !important;
 }
 
 /* Accent block override exclusions (prevent override of primary buttons and badges) */
@@ -178,10 +181,41 @@
   border-color: rgba(245, 158, 11, 0.3) !important;
 }
 
-/* Subtle filter for canvas map to merge with night aesthetic */
+/* Map visual filter for night aesthetic */
 .dark img,
 .dark canvas,
 .dark iframe {
   filter: brightness(0.85) contrast(1.1) !important;
 }
+
+/* Custom modern class styling helpers */
+.gradient-header {
+  background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+}
+
+.dark .glass-card {
+  background: rgba(12, 17, 34, 0.7) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.light .glass-card {
+  background: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Hover effects for premium interaction */
+.interactive-hover {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.interactive-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.dark .interactive-hover:hover {
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 8px 15px -6px rgba(0, 0, 0, 0.4);
+}
+
 
