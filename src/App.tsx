@@ -8,7 +8,7 @@ import SafetyAuditPanel from './components/SafetyAuditPanel';
 import CampusMap from './components/CampusMap';
 import StaffView from './components/StaffView';
 import AnalyticsView from './components/AnalyticsView';
-import { Shield, Users, MapPin, Calendar, HelpCircle, CheckSquare, Sparkles, RefreshCw, AlertTriangle, Info, Sliders, ShieldCheck, Play, CheckCircle2, XCircle, ArrowRight, Search, MessageSquare, Bell, BellOff, Send, Check, ShieldAlert, User, QrCode, Clock, ArrowLeftRight, Camera, BarChart3, AlertOctagon, HelpCircle as HelpIcon, FileText, Plus, X, Edit, Trash2, Lock, Unlock, Key, Settings } from 'lucide-react';
+import { Shield, Users, MapPin, Calendar, HelpCircle, CheckSquare, Sparkles, RefreshCw, AlertTriangle, Info, Sliders, ShieldCheck, Play, CheckCircle2, XCircle, ArrowRight, Search, MessageSquare, Bell, BellOff, Send, Check, ShieldAlert, User, QrCode, Clock, ArrowLeftRight, Camera, BarChart3, AlertOctagon, HelpCircle as HelpIcon, FileText, Plus, X, Edit, Trash2, Lock, Unlock, Key, Settings, Sun, Moon } from 'lucide-react';
 import { seedDatabaseIfEmpty, saveFullStaff, saveFullZones, saveFullRoster, saveFullIncidents, saveSettings, AppSettings, saveFullShifts } from './lib/db.ts';
 import LoginPortal from './components/LoginPortal';
 
@@ -147,6 +147,10 @@ export default function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     return localStorage.getItem('school_safety_is_logged_in') === 'true';
+  });
+
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('school_safety_dark_mode') === 'true';
   });
 
   const [targetLat, setTargetLat] = useState<number>(() => {
@@ -860,6 +864,18 @@ export default function App() {
     }
   };
 
+  const getFriendlyErrorMessage = (msg: string): string => {
+    if (!msg) return 'សេវាកម្មមិនអាចដំណើរការបានឡើយ។';
+    const lower = msg.toLowerCase();
+    if (lower.includes('403') || lower.includes('denied') || lower.includes('permission') || lower.includes('access') || lower.includes('permission_denied')) {
+      return 'គណនីគម្រោង AI ត្រូវបានកម្រិតការចូលប្រើប្រាស់ជាបណ្ដោះអាសន្ន។ ប្រព័ន្ធបានដំណើរការ ម៉ាស៊ីនក្នុងស្រុក (Local Local Optimizer/Auditor) ដ៏ត្រឹមត្រូវ ដើម្បីធានាបាននូវដំណើរការរលូន និងមិនរំខានដល់ការងាររបស់អ្នកឡើយ។';
+    }
+    if (lower.includes('gemini_api_key')) {
+      return 'កូដសម្ងាត់ Gemini API មិនទាន់ត្រូវបានកំណត់កំណត់រចនាសម្ព័ន្ធទេ។ កំពុងបង្ហាញលទ្ធផលដែលបានបង្កើតដោយប្រព័ន្ធក្នុងស្រុកជំនួសវិញ។';
+    }
+    return msg;
+  };
+
   const handleAISolve = async () => {
     setIsAIWorking(true);
     setWarning(null);
@@ -881,8 +897,8 @@ export default function App() {
         throw new Error(data.error || 'Server failed to optimize schedule');
       }
     } catch (err: any) {
-      console.error(err);
-      setWarning(`កំហុស AI Assist: ${err.message}។ កំពុងបង្ហាញការចាត់តាំងគំរូក្នុងតំបន់ជំនួសវិញ។`);
+      console.warn('AI Assist fallback handled:', err);
+      setWarning(`កំហុស AI Assist: ${getFriendlyErrorMessage(err.message)}`);
     } finally {
       setIsAIWorking(false);
     }
@@ -908,8 +924,8 @@ export default function App() {
         throw new Error(data.error || 'Server failed to analyze safety roster');
       }
     } catch (err: any) {
-      console.error(err);
-      setWarning(`កំហុសក្នុងការវាយតម្លៃ៖ ${err.message}។ បានដំណើរការម៉ាស៊ីនវិភាគក្នុងស្រុកជំនួសវិញ។`);
+      console.warn('Safety Audit fallback handled:', err);
+      setWarning(`កំហុសក្នុងការវាយតម្លៃ៖ ${getFriendlyErrorMessage(err.message)}`);
     } finally {
       setIsAuditing(false);
     }
@@ -1028,7 +1044,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans antialiased pb-12">
+    <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-800'} font-sans antialiased pb-12 transition-colors duration-200`}>
       {/* Top Warning Banner if Fallback or API issue */}
       {warning && (
         <div className="bg-indigo-600 text-white py-2.5 px-6 text-xs font-semibold flex items-center justify-between shadow-md border-b border-indigo-700">
@@ -1057,6 +1073,34 @@ export default function App() {
             <span className="text-xs font-bold text-slate-500">ទិដ្ឋភាពទូទៅប្រចាំសប្តាហ៍</span>
           </div>
           <div className="hidden md:block h-10 w-px bg-slate-200 mx-1"></div>
+          {/* Dark Mode Toggle for Nighttime Security Staff */}
+          <button
+            onClick={() => {
+              setIsDarkMode(prev => {
+                const next = !prev;
+                localStorage.setItem('school_safety_dark_mode', next ? 'true' : 'false');
+                return next;
+              });
+            }}
+            className={`p-2 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 ${
+              isDarkMode 
+                ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-850 hover:text-amber-300' 
+                : 'bg-slate-50 border-slate-200 text-slate-650 hover:bg-slate-100 hover:text-slate-800'
+            }`}
+            title={isDarkMode ? "ប្តូរទៅរបៀបពេលថ្ងៃ (Light Mode)" : "ប្តូរទៅរបៀបពេលយប់ (Dark Mode) សម្រាប់សន្តិសុខ"}
+          >
+            {isDarkMode ? (
+              <>
+                <Sun className="w-4 h-4 text-amber-400" />
+                <span className="text-[10px] font-bold hidden sm:inline">វេនយប់ (Night Mode)</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-4 h-4 text-indigo-600" />
+                <span className="text-[10px] font-bold text-slate-600 hidden sm:inline">វេនថ្ងៃ (Light Mode)</span>
+              </>
+            )}
+          </button>
           <div className="flex items-center gap-3 bg-slate-50 border border-slate-150 rounded-xl px-3 py-1.5 shadow-2xs">
             <div className="text-right">
               <p className="text-xs sm:text-sm font-bold text-slate-800 font-display flex items-center gap-1.5 justify-end">

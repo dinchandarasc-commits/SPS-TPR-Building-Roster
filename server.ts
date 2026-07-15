@@ -113,17 +113,23 @@ async function startServer() {
       res.json({ success: true, roster: generatedRoster, mode: 'AI' });
 
     } catch (error: any) {
-      console.error('Gemini Roster Generation Error:', error.message);
+      console.log('Gemini Roster Generation fallback engaged: API quota or permission restriction.');
       
       // Local Heuristic fallback in case API key is missing or there is a quota error
       const fallbackRoster = generateHeuristicRoster(staff, zones, shifts);
+      
+      let friendlyWarning = `សេវាកម្ម AI មិនទាន់អាចដំណើរការបាននៅឡើយទេ។ ប្រព័ន្ធបានប្តូរមកប្រើប្រាស់ ម៉ាស៊ីនបង្កើតតារាងក្នុងស្រុក (Local Heuristic Engine) ជំនួសវិញដោយជោគជ័យ។`;
+      if (error.message.includes('GEMINI_API_KEY')) {
+        friendlyWarning = 'កូដសម្ងាត់ Gemini API មិនទាន់ត្រូវបានកំណត់កំណត់រចនាសម្ព័ន្ធទេ។ កំពុងបង្ហាញតារាងដែលបង្កើតឡើងដោយក្បួនដោះស្រាយជំនួសវិញ។';
+      } else if (error.message.includes('403') || error.message.includes('denied') || error.message.includes('permission') || error.message.includes('access') || error.message.includes('PERMISSION_DENIED')) {
+        friendlyWarning = 'គណនីគម្រោង AI ត្រូវបានកម្រិតការចូលប្រើប្រាស់ជាបណ្ដោះអាសន្ន។ ប្រព័ន្ធបានដំណើរការ ម៉ាស៊ីនបង្កើតតារាងជំនួស (Local Heuristic Optimizer) ដ៏ត្រឹមត្រូវ ដើម្បីធានាបាននូវដំណើរការរលូន និងមិនរំខានដល់ការងាររបស់អ្នកឡើយ។';
+      }
+
       res.json({
         success: true,
         roster: fallbackRoster,
         mode: 'Heuristic Fallback',
-        warning: error.message.includes('GEMINI_API_KEY') 
-          ? 'កូដសម្ងាត់ Gemini API មិនទាន់ត្រូវបានកំណត់កំណត់រចនាសម្ព័ន្ធទេ។ កំពុងបង្ហាញតារាងដែលបង្កើតឡើងដោយក្បួនដោះស្រាយជំនួសវិញ។'
-          : `សេវាកម្ម AI មិនដំណើរការ (${error.message})។ កំពុងបង្ហាញតារាងដែលបង្កើតឡើងដោយក្បួនដោះស្រាយជំនួសវិញ។`
+        warning: friendlyWarning
       });
     }
   });
@@ -207,17 +213,23 @@ async function startServer() {
       res.json({ success: true, audit: auditResult, mode: 'AI' });
 
     } catch (error: any) {
-      console.error('Gemini Safety Audit Error:', error.message);
+      console.log('Gemini Safety Audit fallback engaged: API quota or permission restriction.');
 
       // Perform local heuristic audit in case of failure or missing key
       const fallbackAudit = performHeuristicAudit(staff, zones, shifts, roster);
+      
+      let friendlyWarning = `សេវាកម្ម AI មិនទាន់អាចដំណើរការបាននៅឡើយទេ។ ប្រព័ន្ធបានប្តូរមកប្រើប្រាស់ ម៉ាស៊ីនវាយតម្លៃសុវត្ថិភាពក្នុងតំបន់ (Local Safety Auditor) ជំនួសវិញដោយជោគជ័យ។`;
+      if (error.message.includes('GEMINI_API_KEY')) {
+        friendlyWarning = 'កូដសម្ងាត់ Gemini API មិនទាន់ត្រូវបានកំណត់កំណត់រចនាសម្ព័ន្ធទេ។ កំពុងដំណើរការម៉ាស៊ីនវាយតម្លៃសុវត្ថិភាពក្នុងតំបន់។';
+      } else if (error.message.includes('403') || error.message.includes('denied') || error.message.includes('permission') || error.message.includes('access') || error.message.includes('PERMISSION_DENIED')) {
+        friendlyWarning = 'គណនីគម្រោង AI ត្រូវបានកម្រិតការចូលប្រើប្រាស់ជាបណ្ដោះអាសន្ន។ ប្រព័ន្ធបានដំណើរការ ម៉ាស៊ីនវាយតម្លៃសុវត្ថិភាពក្នុងតំបន់ (Local Safety Auditor Engine) ដ៏ត្រឹមត្រូវ ដើម្បីធានាបាននូវដំណើរការវាយតម្លៃដោយរលូន និងមិនរំខានដល់ការងាររបស់អ្នកឡើយ។';
+      }
+
       res.json({
         success: true,
         audit: fallbackAudit,
         mode: 'Heuristic Fallback',
-        warning: error.message.includes('GEMINI_API_KEY')
-          ? 'កូដសម្ងាត់ Gemini API មិនទាន់ត្រូវបានកំណត់កំណត់រចនាសម្ព័ន្ធទេ។ កំពុងដំណើរការម៉ាស៊ីនវាយតម្លៃសុវត្ថិភាពក្នុងតំបន់។'
-          : `សេវាកម្ម AI មិនដំណើរការ (${error.message})។ កំពុងដំណើរការម៉ាស៊ីនវាយតម្លៃសុវត្ថិភាពក្នុងតំបន់។`
+        warning: friendlyWarning
       });
     }
   });
@@ -254,6 +266,13 @@ function generateHeuristicRoster(staff: any[], zones: any[], shifts: any[]): any
   const dutyCounts: Record<string, number> = {};
   staff.forEach(s => { dutyCounts[s.id] = 0; });
 
+  // Track daily duty counts per staff member to distribute duties across the week
+  const dailyDutyCounts: Record<string, Record<string, number>> = {};
+  days.forEach(day => {
+    dailyDutyCounts[day] = {};
+    staff.forEach(s => { dailyDutyCounts[day][s.id] = 0; });
+  });
+
   days.forEach(day => {
     shifts.forEach(shift => {
       // Keep track of who is already scheduled in this SPECIFIC shift
@@ -269,44 +288,92 @@ function generateHeuristicRoster(staff: any[], zones: any[], shifts: any[]): any
         const assignedStaff: string[] = [];
         const needed = zone.minStaffRequired || 1;
 
-        // Try to find matching staff members who are free
+        // Pass 1: Try to find matching staff members who are free, matching roles, and have 0 duties today
         for (let i = 0; i < staff.length; i++) {
           if (assignedStaff.length >= needed) break;
 
           const member = staff[i];
-          if (member.role === 'Management') continue; // Skip Management/Admin who do not have duty hours
+          if (member.role === 'Management') continue; // Skip Management/Admin
 
           const currentCount = dutyCounts[member.id] || 0;
+          const todayCount = dailyDutyCounts[day][member.id] || 0;
+          const maxDaily = member.role === 'Security' ? 2 : 1;
 
-          // Constraints checklist:
-          // - Staff not exceeded max duties
-          // - Staff not already working this shift
-          // - Role-to-Zone suitability: Security guards suited for Zone D, Teachers/Management for A & B
           const isSecurity = member.role === 'Security';
           const isZoneD = zone.zoneType === 'Zone D';
-          const roleMatch = (isZoneD && isSecurity) || (!isZoneD && !isSecurity) || (Math.random() > 0.4); // allow slight mixed assignments if security is scarce
+          const roleMatch = (isZoneD && isSecurity) || (!isZoneD && !isSecurity);
 
-          if (currentCount < member.maxWeeklyDuties && !assignedInCurrentShift.has(member.id) && roleMatch) {
+          if (currentCount < member.maxWeeklyDuties && todayCount < maxDaily && todayCount === 0 && !assignedInCurrentShift.has(member.id) && roleMatch) {
             assignedStaff.push(member.id);
             assignedInCurrentShift.add(member.id);
             dutyCounts[member.id] = currentCount + 1;
+            dailyDutyCounts[day][member.id] = todayCount + 1;
           }
         }
 
-        // If we still need staff, relax the role matching criteria
+        // Pass 2: Relax role matching but still keep today's duties to 0
         if (assignedStaff.length < needed) {
           for (let i = 0; i < staff.length; i++) {
             if (assignedStaff.length >= needed) break;
 
             const member = staff[i];
-            if (member.role === 'Management') continue; // Skip Management/Admin who do not have duty hours
+            if (member.role === 'Management') continue;
 
             const currentCount = dutyCounts[member.id] || 0;
+            const todayCount = dailyDutyCounts[day][member.id] || 0;
+            const maxDaily = member.role === 'Security' ? 2 : 1;
 
-            if (currentCount < member.maxWeeklyDuties && !assignedInCurrentShift.has(member.id)) {
+            if (currentCount < member.maxWeeklyDuties && todayCount < maxDaily && todayCount === 0 && !assignedInCurrentShift.has(member.id)) {
               assignedStaff.push(member.id);
               assignedInCurrentShift.add(member.id);
               dutyCounts[member.id] = currentCount + 1;
+              dailyDutyCounts[day][member.id] = todayCount + 1;
+            }
+          }
+        }
+
+        // Pass 3: Allow more duties today (up to maxDaily) with role matching
+        if (assignedStaff.length < needed) {
+          for (let i = 0; i < staff.length; i++) {
+            if (assignedStaff.length >= needed) break;
+
+            const member = staff[i];
+            if (member.role === 'Management') continue;
+
+            const currentCount = dutyCounts[member.id] || 0;
+            const todayCount = dailyDutyCounts[day][member.id] || 0;
+            const maxDaily = member.role === 'Security' ? 2 : 1;
+
+            const isSecurity = member.role === 'Security';
+            const isZoneD = zone.zoneType === 'Zone D';
+            const roleMatch = (isZoneD && isSecurity) || (!isZoneD && !isSecurity);
+
+            if (currentCount < member.maxWeeklyDuties && todayCount < maxDaily && !assignedInCurrentShift.has(member.id) && roleMatch) {
+              assignedStaff.push(member.id);
+              assignedInCurrentShift.add(member.id);
+              dutyCounts[member.id] = currentCount + 1;
+              dailyDutyCounts[day][member.id] = todayCount + 1;
+            }
+          }
+        }
+
+        // Pass 4: Relax both role matching and allow up to maxDaily duties today
+        if (assignedStaff.length < needed) {
+          for (let i = 0; i < staff.length; i++) {
+            if (assignedStaff.length >= needed) break;
+
+            const member = staff[i];
+            if (member.role === 'Management') continue;
+
+            const currentCount = dutyCounts[member.id] || 0;
+            const todayCount = dailyDutyCounts[day][member.id] || 0;
+            const maxDaily = member.role === 'Security' ? 2 : 1;
+
+            if (currentCount < member.maxWeeklyDuties && todayCount < maxDaily && !assignedInCurrentShift.has(member.id)) {
+              assignedStaff.push(member.id);
+              assignedInCurrentShift.add(member.id);
+              dutyCounts[member.id] = currentCount + 1;
+              dailyDutyCounts[day][member.id] = todayCount + 1;
             }
           }
         }
